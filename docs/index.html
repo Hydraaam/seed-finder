@@ -6,8 +6,8 @@
     <title>Minecraft Seed Generator Ultimate</title>
     <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.22.5/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
         body { background-color: #1a1a1a; color: #e0e0e0; font-family: 'Arial', sans-serif; }
         .scrollbar-custom::-webkit-scrollbar { width: 8px; }
@@ -317,7 +317,7 @@
                 let attempts = 0;
                 const maxAttempts = 20000;
                 while (attempts < maxAttempts && !stopRef.current) {
-                    const seed = BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)) - BigInt(Number.MAX_SAFE_INTEGER / 2);
+                    const seed = BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER - Number.MAX_SAFE_INTEGER / 2));
                     let biomeValid = true;
                     for (const biome of biomes) {
                         let found = false;
