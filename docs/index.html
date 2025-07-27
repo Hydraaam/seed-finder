@@ -117,7 +117,17 @@ if (attempts % 10 === 0) { // Changed from 100 to 10
         // Structure position calculation
         function getStructurePos(seed, structure, version, radius, filters = {}) {
             const versionNum = parseFloat(version);
-            const rand = new MinecraftRandom(seed + structure.hashCode());
+            // Simple string hash function
+            const hashCode = str => {
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    const char = str.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash;
+                }
+                return hash;
+            };
+            const rand = new MinecraftRandom(seed + hashCode(structure));
             const chunkSize = 16;
             const spacing = {
                 Village: 34, Mineshaft: 8, Stronghold: versionNum < 1.18 ? 100 : 200,
