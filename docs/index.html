@@ -19,7 +19,59 @@
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        // Constants for structure generation and biome analysis
+        // Constants for structure generation and biome analysis with enhanced features
+        const Constants = {
+            STRUCTURES: {
+            Village: { spacing: 32, minDist: 8, weight: 1.0, yRange: [-64, 319], types: ["Plains", "Desert", "Savanna", "Snowy", "Taiga"] },
+            Mineshaft: { spacing: 1, minDist: 1, weight: 0.8, yRange: [-64, 30], types: ["Normal", "Mesa"] }, 
+            Stronghold: { spacing: 16, minDist: 1, weight: 1.0, yRange: [-64, 30], special: true },
+            Temple: { spacing: 32, minDist: 8, weight: 0.9, yRange: [-64, 319], types: ["Desert", "Jungle", "Swamp", "Igloo"] },
+            Monument: { spacing: 32, minDist: 5, weight: 0.7, yRange: [0, 63], underwater: true },
+            Mansion: { spacing: 80, minDist: 20, weight: 0.5, yRange: [60, 319], exclusive: true },
+            "Bastion Remnant": { spacing: 27, minDist: 10, weight: 0.8, yRange: [0, 128], types: ["Bridge", "Hoglin Stable", "Housing", "Treasure"] },
+            "Ancient City": { spacing: 24, minDist: 8, weight: 0.7, yRange: [-64, 0], deepslate: true },
+            "Nether Fortress": { spacing: 16, minDist: 5, weight: 0.9, yRange: [0, 128], nether: true },
+            "Trial Chambers": { spacing: 32, minDist: 8, weight: 0.6, yRange: [-64, 30], types: ["Small", "Medium", "Large"] },
+            "End City": { spacing: 20, minDist: 11, weight: 0.8, yRange: [0, 256], end: true },
+            "Ruined Portal": { spacing: 25, minDist: 8, weight: 0.9, yRange: [-64, 319], types: ["Standard", "Giant"] }
+            },
+            BIOME_WEIGHTS: {
+            OVERWORLD: {
+                Plains: 0.35, Forest: 0.25, Desert: 0.15, Taiga: 0.15, Swamp: 0.10,
+                Jungle: 0.05, Savanna: 0.12, Badlands: 0.05, "Mushroom Fields": 0.005,
+                "Deep Dark": 0.04, "Mangrove Swamp": 0.05, "Cherry Grove": 0.03,
+                "Lush Caves": 0.04, "Snowy Plains": 0.08, Ocean: 0.25, 
+                Meadow: 0.05, "Bamboo Jungle": 0.02, "Frozen Ocean": 0.08,
+                "Birch Forest": 0.12, "Dark Forest": 0.08
+            },
+            NETHER: {
+                "Nether Wastes": 0.30, "Crimson Forest": 0.25, "Warped Forest": 0.25,
+                "Soul Sand Valley": 0.15, "Basalt Deltas": 0.05
+            },
+            END: {
+                "End Highlands": 0.40, "End Midlands": 0.30, "End Barrens": 0.20,
+                "Small End Islands": 0.10
+            }
+            },
+            WORLD_SETTINGS: {
+            CHUNK_SIZE: 16,
+            MAX_HEIGHT: 319,
+            MIN_HEIGHT: -64,
+            SEARCH_ITERATIONS: 20000,
+            STRUCTURE_REGION_BITS: 12,
+            MAX_CACHED_RESULTS: 1000,
+            NOISE_OCTAVES: 8,
+            NOISE_PERSISTENCE: 0.5,
+            NOISE_SCALE: 0.007
+            },
+            LOOT_TABLES: {
+            Village: ["iron", "food", "emeralds"],
+            Temple: ["gold", "diamonds", "emeralds"],
+            Monument: ["gold", "sponge", "prismarine"],
+            "Ancient City": ["echo_shards", "disc_fragments", "enchanted_books"],
+            "Nether Fortress": ["nether_wart", "blaze_rods", "wither_skulls"]
+            }
+        };
         const Constants = {
             STRUCTURES: {
                 Village: { spacing: 32, minDist: 8, weight: 1.0, yRange: [-64, 319] },
