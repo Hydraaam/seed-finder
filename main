@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft Seed Generator Ultimate</title>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.22.5/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #1a1a1a; color: #e0e0e0; font-family: 'Arial', sans-serif; }
+        .scrollbar-custom::-webkit-scrollbar { width: 8px; }
+        .scrollbar-custom::-webkit-scrollbar-track { background: #2b2b2b; }
+        .scrollbar-custom::-webkit-scrollbar-thumb { background: #4caf50; border-radius: 4px; }
+        .scrollbar-custom::-webkit-scrollbar-thumb:hover { background: #66bb6a; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        // Minecraft Random (Java Random implementation)
+        class MinecraftRandom {
+            constructor(seed) {
+                this.seed = BigInt(seed) & ((BigInt(1) << BigInt(48)) - BigInt(1));
+            }
+            nextInt(bound) {
+                this.seed = (this.seed * BigInt(0x5DEECE66D) + BigInt(0xB)) & ((BigInt(1) << BigInt(48)) - BigInt(1));
+                return Number(this.seed >> BigInt(16)) % bound;
+            }
+            nextFloat() {
+                this.seed = (this.seed * BigInt(0x5DEECE66D) + BigInt(0xB)) & ((BigInt(1) << BigInt(48)) - BigInt(1));
+                return Number(this.seed >> BigInt(24)) / (1 << 24);
+            }
+        }
+
+        // Perlin Noise simulation (improved precision)
+        function perlinNoise(x, z, seed, scale = 0.01, octaves = 16) {
+            let total = 0;
+            for (let i = 0; i < octaves; i++) {
+                const freq = scale * Math.pow(2, i);
+                const amp = Math.pow(0.5, i);
+                const rand = new MinecraftRandom(seed + i * 1000);
+                const gridX = Math.floor(x * freq), gridZ = Math.floor(z * freq);
+                const n00 = rand.nextFloat() * 2 - 1;
+                const n10 = rand.nextFloat() * 2 - 1;
+                const n01 = rand.nextFloat() * 2 - 1;
+                const n11 = rand.nextFloat() * 2 - 1;
+                const fx = x * freq - gridX, fz = z * freq - gridZ;
+                const u = fx * fx * (3 - 2 * fx), v = fz * fz * (3 - 2 * fz);
+                const lerpX0 = n00 + u * (n10 - n00);
+                const lerpX1 = n01 + u * (n11 - n01);
+                total += (lerpX0 + v * (lerpX1 - lerpX0)) * amp;
+            }
+            return total;
+        }
+
+        // Get biome at position
+        function getBiomeAt(seed, x, z, version, dimension = "overworld") {
+            const biomeMap = dimension === "nether" ? {
+                "Nether Wastes": [8, 0.30], "Crimson Forest": [171, 0.25], "Warped Forest": [170, 0.25],
+                "Soul Sand Valley": [172, 0.15], "Basalt Deltas": [173, 0.05]
+            } : {
+                "Plains": [1, 0.35], "Forest": [4, 0.25], "Desert": [2, 0.15], "Taiga": [5, 0.15],
+                "Swamp": [6, 0.10], "Jungle": [21, 0.05], "Savanna": [35, 0.12], "Badlands": [37, 0.05],
+                "Mushroom Fields": [14, 0.005], "Deep Dark": [170, 0.04], "Mangrove Swamp": [171, 0.05],
+                "Cherry Grove": [172, 0.03], "Lush Caves": [173, 0.04], "Snowy Plains": [12, 0.08],
+                "Ocean": [0, 0.25], "Meadow": [174, 0.05], "Bamboo Jungle": [168, 0.02]
+            };
+            const versionNum = parseFloat(version);
+            const noiseSeed = BigInt(seed) + BigInt(x) * BigInt(341873128712) + BigInt(z) * BigInt(132897987541);
+            if (dimension === "nether") {
+                const params = [
+                    ["temperature", 0.006, Number(noiseSeed)], ["humidity", 0.005, Number(noiseSeed) + 1],
+                    ["erosion", 0.009, Number(noiseSeed) + 2], ["weirdness", 0.007, Number(noiseSeed) + 3]
+                ];
+                const weights = [0.4, 0.3, 0.2, 0.1];
+                const noise = params.reduce((sum, [_, scale, s], i) => sum + weights[i] * perlinNoise(x, z, s, scale), 0);
+                const biomeId = Math.floor((noise + 1) * Object.values(biomeMap).reduce((s, [_, w]) => s + w, 0) / 2 * 100);
+                let cumWeight = 0;
+                for (const [biome, [id, weight]] of Object.entries(biomeMap)) {
+                    cumWeight += weight * 100;
+                    if (biomeId <= cumWeight) return [biome, id];
+                }
+            } else if (versionNum >= 1.18) {
+                const params = [
+                    ["temperature", 0.006, Number(noiseSeed)], ["humidity", 0.005, Number(noiseSeed) + 1],
+                    ["continentalness", 0.009, Number(noiseSeed) + 2], ["erosion", 0.011, Number(noiseSeed) + 3],
+                    ["depth", 0.0025, Number(noiseSeed) + 4], ["weirdness", 0.006, Number(noiseSeed) + 5],
+                    ["slope", 0.007, Number(noiseSeed) + 6], ["biomass", 0.004, Number(noiseSeed) + 7],
+                    ["vegetation", 0.005, Number(noiseSeed) + 8], ["climate", 0.007, Number(noiseSeed) + 9],
+                    ["biodiversity", 0.004, Number(noiseSeed) + 10], ["geology", 0.003, Number(noiseSeed) + 11],
+                    ["terrain", 0.005, Number(noiseSeed) + 12], ["surface", 0.006, Number(noiseSeed) + 13],
+                    ["altitude", 0.004, Number(noiseSeed) + 14], ["stability", 0.003, Number(noiseSeed) + 15]
+                ];
+                const weights = [0.20, 0.15, 0.10, 0.08, 0.07, 0.06, 0.05, 0.05, 0.05, 0.05, 0.04, 0.04, 0.03, 0.03, 0.02, 0.02];
+                const noise = params.reduce((sum, [_, scale, s], i) => sum + weights[i] * perlinNoise(x, z, s, scale), 0);
+                const biomeId = Math.floor((noise + 1) * Object.values(biomeMap).reduce((s, [_, w]) => s + w, 0) / 2 * 100);
+                let cumWeight = 0;
+                for (const [biome, [id, weight]] of Object.entries(biomeMap)) {
+                    cumWeight += weight * 100;
+                    if (biomeId <= cumWeight) return [biome, id];
+                }
+            } else {
+                const rand = new MinecraftRandom(Number(noiseSeed));
+                const biomeId = rand.nextInt(Object.keys(biomeMap).length);
+                const biomeName = Object.keys(biomeMap)[biomeId % Object.keys(biomeMap).length];
+                return [biomeName, biomeMap[biomeName][0]];
+            }
+            return ["Plains", 1];
+        }
+
+        // Structure position calculation
+        function getStructurePos(seed, structure, version, radius, filters = {}) {
+            const versionNum = parseFloat(version);
+            const rand = new MinecraftRandom(seed + structure.hashCode());
+            const chunkSize = 16;
+            const spacing = {
+                Village: 34, Mineshaft: 8, Stronghold: versionNum < 1.18 ? 100 : 200,
+                Temple: 32, Monument: 29, Mansion: 80, "Bastion Remnant": 30,
+                "Ancient City": 24, "Nether Fortress": 27, "Trial Chambers": 32
+            };
+            const minDist = {
+                Village: 8, Mineshaft: 1, Stronghold: 1, Temple: 8, Monument: 5,
+                Mansion: 20, "Bastion Remnant": 10, "Ancient City": 8, "Nether Fortress": 5,
+                "Trial Chambers": 8
+            };
+            const biomeRequirements = {
+                Village: ["Plains", "Desert", "Savanna", "Taiga", "Meadow"],
+                Temple: ["Desert", "Jungle", "Swamp", "Snowy Plains"],
+                Monument: ["Ocean"],
+                Mansion: ["Forest"],
+                "Ancient City": ["Deep Dark"],
+                "Bastion Remnant": ["Nether Wastes", "Crimson Forest", "Warped Forest", "Soul Sand Valley", "Basalt Deltas"],
+                "Nether Fortress": ["Nether Wastes", "Crimson Forest", "Warped Forest", "Soul Sand Valley", "Basalt Deltas"],
+                "Trial Chambers": ["Deep Dark"]
+            };
+            let blockX, blockZ;
+            if (structure === "Stronghold" && versionNum < 1.18) {
+                const ring = rand.nextInt(3);
+                const minRadius = [1408, 2720, 4032][ring];
+                const maxRadius = [2688, 4000, 5312][ring];
+                const angle = rand.nextFloat() * 2 * Math.PI;
+                const distance = minRadius + rand.nextFloat() * (maxRadius - minRadius);
+                blockX = Math.round(Math.cos(angle) * distance);
+                blockZ = Math.round(Math.sin(angle) * distance);
+            } else {
+                const regionSize = spacing[structure] * chunkSize;
+                const regionX = rand.nextInt(Math.floor(radius / regionSize * 2)) - Math.floor(radius / regionSize);
+                const regionZ = rand.nextInt(Math.floor(radius / regionSize * 2)) - Math.floor(radius / regionSize);
+                blockX = (regionX * regionSize) + rand.nextInt(chunkSize * spacing[structure]);
+                blockZ = (regionZ * regionSize) + rand.nextInt(chunkSize * spacing[structure]);
+            }
+            const distance = Math.sqrt(blockX ** 2 + blockZ ** 2);
+            if (distance <= radius && distance >= minDist[structure] * chunkSize) {
+                if (filters.stronghold_distance && structure === "Stronghold" && distance > filters.stronghold_distance) {
+                    return null;
+                }
+                const dimension = ["Bastion Remnant", "Nether Fortress"].includes(structure) ? "nether" : "overworld";
+                for (const [dx, dz] of [[0, 0], [8, 8], [-8, -8], [8, -8], [-8, 8]]) {
+                    const [biome] = getBiomeAt(seed, blockX + dx, blockZ + dz, version, dimension);
+                    if (!biomeRequirements[structure].includes(biome)) return null;
+                }
+                let desc = structure;
+                if (structure === "Temple") {
+                    const templeTypes = ["Desert", "Jungle", "Swamp", "Igloo"];
+                    const templeType = templeTypes[rand.nextInt(templeTypes.length)];
+                    if (filters.temple_type && templeType !== filters.temple_type) return null;
+                    desc = `Temple (${templeType})`;
+                } else if (structure === "Bastion Remnant") {
+                    const bastionTypes = ["Hoglin Stable", "Housing Units", "Treasure", "Bridge"];
+                    const bastionType = bastionTypes[rand.nextInt(bastionTypes.length)];
+                    if (filters.bastion_type && bastionType !== filters.bastion_type) return null;
+                    desc = `Bastion Remnant (${bastionType})`;
+                }
+                return [blockX, blockZ, desc, distance];
+            }
+            return null;
+        }
+
+        // Biome distribution analysis
+        function analyzeBiomeDistribution(seed, version, radius = 4000, dimension = "overworld") {
+            const biomeCounts = {};
+            const points = Array.from({ length: 200 }, (_, i) => -radius + (i * 2 * radius) / 199);
+            for (const x of points) {
+                for (const z of points) {
+                    const [biome] = getBiomeAt(seed, Math.floor(x), Math.floor(z), version, dimension);
+                    biomeCounts[biome] = (biomeCounts[biome] || 0) + 1;
+                }
+            }
+            const total = Object.values(biomeCounts).reduce((s, c) => s + c, 0);
+            return Object.fromEntries(Object.entries(biomeCounts).map(([b, c]) => [b, (c / total * 100)]));
+        }
+
+        // Log seed (using localStorage)
+        function logSeed(seed, version, biomes, structures, radius, filters, status, structurePositions = null) {
+            const timestamp = new Date().toISOString();
+            const logEntry = {
+                timestamp, seed, version, biomes, structures, radius, filters, status,
+                spawnBiomes: Array.from({ length: 25 }, (_, i) => {
+                    const x = [-32, -16, 0, 16, 32][Math.floor(i / 5)];
+                    const z = [-32, -16, 0, 16, 32][i % 5];
+                    const [biome] = getBiomeAt(seed, x, z, version, "overworld");
+                    return `(${x}, ${z}): ${biome}`;
+                }),
+                structurePositions
+            };
+            const logs = JSON.parse(localStorage.getItem("seedLogs") || "[]");
+            logs.push(logEntry);
+            if (JSON.stringify(logs).length > 5 * 1024 * 1024) logs.shift();
+            localStorage.setItem("seedLogs", JSON.stringify(logs));
+        }
+
+        // Main React App
+        function App() {
+            const [version, setVersion] = React.useState("1.21");
+            const [biomes, setBiomes] = React.useState(["Plains"]);
+            const [structures, setStructures] = React.useState([]);
+            const [radius, setRadius] = React.useState(500);
+            const [priority, setPriority] = React.useState("none");
+            const [filters, setFilters] = React.useState({ temple_type: "Any", bastion_type: "Any", stronghold_distance: 0 });
+            const [currentSeed, setCurrentSeed] = React.useState(null);
+            const [positions, setPositions] = React.useState({});
+            const [biomeDist, setBiomeDist] = React.useState({});
+            const [biomeDistNether, setBiomeDistNether] = React.useState({});
+            const [isRunning, setIsRunning] = React.useState(false);
+            const [progress, setProgress] = React.useState(0);
+            const [attempts, setAttempts] = React.useState(0);
+            const [startTime, setStartTime] = React.useState(0);
+            const [result, setResult] = React.useState("");
+            const [dimension, setDimension] = React.useState("overworld");
+            const [zoom, setZoom] = React.useState(1.0);
+            const [panOffset, setPanOffset] = React.useState({ x: 0, y: 0 });
+            const [panStart, setPanStart] = React.useState({ x: 0, y: 0 });
+            const [profiles, setProfiles] = React.useState(JSON.parse(localStorage.getItem("profiles") || "{}"));
+            const [selectedProfile, setSelectedProfile] = React.useState("");
+            const canvasRef = React.useRef(null);
+            const stopRef = React.useRef(false);
+
+            // Biome and structure options
+            const biomeOptions = [
+                "Plains", "Forest", "Desert", "Taiga", "Swamp", "Jungle", "Savanna", "Badlands",
+                "Mushroom Fields", "Deep Dark", "Mangrove Swamp", "Cherry Grove", "Lush Caves",
+                "Snowy Plains", "Ocean", "Meadow", "Bamboo Jungle"
+            ];
+            const structureOptions = [
+                "Village", "Mineshaft", "Stronghold", "Temple", "Monument", "Mansion",
+                "Bastion Remnant", "Ancient City", "Nether Fortress", "Trial Chambers"
+            ];
+
+            // Draw map on canvas
+            React.useEffect(() => {
+                if (Object.keys(positions).length === 0) return;
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext("2d");
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const scale = 600 / (2 * radius) * zoom;
+                const biomeColors = {
+                    "Plains": "#90EE90", "Forest": "#228B22", "Desert": "#EDC9AF", "Taiga": "#2F4F4F",
+                    "Swamp": "#6B8E23", "Jungle": "#006400", "Savanna": "#DAA520", "Badlands": "#8B0000",
+                    "Mushroom Fields": "#FFE4E1", "Deep Dark": "#1C2526", "Mangrove Swamp": "#3CB371",
+                    "Cherry Grove": "#FF69B4", "Lush Caves": "#00CED1", "Snowy Plains": "#F0F8FF",
+                    "Ocean": "#1E90FF", "Meadow": "#98FB98", "Bamboo Jungle": "#9ACD32",
+                    "Nether Wastes": "#8B0000", "Crimson Forest": "#DC143C", "Warped Forest": "#20B2AA",
+                    "Soul Sand Valley": "#B0C4DE", "Basalt Deltas": "#696969"
+                };
+                const structureColors = {
+                    "Village": "yellow", "Mineshaft": "gray", "Stronghold": "purple", "Temple": "orange",
+                    "Monument": "blue", "Mansion": "brown", "Bastion Remnant": "black", "Ancient City": "cyan",
+                    "Nether Fortress": "red", "Trial Chambers": "magenta"
+                };
+                const step = Math.floor(4000 / 80);
+                for (let x = -4000; x <= 4000; x += step) {
+                    for (let z = -4000; z <= 4000; z += step) {
+                        const [biome] = getBiomeAt(currentSeed || 0, x, z, version, dimension);
+                        const cx = 300 + (x * scale + panOffset.x);
+                        const cy = 300 + (z * scale + panOffset.y);
+                        ctx.fillStyle = biomeColors[biome] || "#2b2b2b";
+                        ctx.globalAlpha = 0.5;
+                        ctx.fillRect(cx - step * scale, cy - step * scale, step * scale * 2, step * scale * 2);
+                        ctx.globalAlpha = 1.0;
+                    }
+                }
+                if (dimension === "overworld") {
+                    ctx.fillStyle = "red";
+                    ctx.beginPath();
+                    ctx.arc(300, 300, 6, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.strokeStyle = "black";
+                    ctx.stroke();
+                }
+                for (const [struct, [x, z, desc]] of Object.entries(positions)) {
+                    if (dimension === "nether" && !["Bastion Remnant", "Nether Fortress"].includes(struct)) continue;
+                    if (dimension === "overworld" && ["Bastion Remnant", "Nether Fortress"].includes(struct)) continue;
+                    const cx = 300 + (x * scale + panOffset.x);
+                    const cy = 300 + (z * scale + panOffset.y);
+                    ctx.fillStyle = structureColors[struct] || "white";
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 6, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.strokeStyle = "black";
+                    ctx.stroke();
+                    ctx.fillStyle = "#e0e0e0";
+                    ctx.font = "12px Arial";
+                    ctx.fillText(desc, cx + 10, cy + 4);
+                }
+            }, [currentSeed, positions, radius, zoom, dimension, panOffset]);
+
+            // Find valid seed (async)
+            async function findValidSeed() {
+                setIsRunning(true);
+                setProgress(0);
+                setAttempts(0);
+                setStartTime(Date.now());
+                setResult("Generating seed, please wait...");
+                stopRef.current = false;
+                let attempts = 0;
+                const maxAttempts = 20000;
+                while (attempts < maxAttempts && !stopRef.current) {
+                    const seed = BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)) - BigInt(Number.MAX_SAFE_INTEGER / 2);
+                    let biomeValid = true;
+                    for (const biome of biomes) {
+                        let found = false;
+                        for (const x of [-32, -16, 0, 16, 32]) {
+                            for (const z of [-32, -16, 0, 16, 32]) {
+                                if (getBiomeAt(seed, x, z, version, "overworld")[0] === biome) {
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (found) break;
+                        }
+                        if (!found) {
+                            biomeValid = false;
+                            break;
+                        }
+                    }
+                    let status = biomeValid ? null : "Rejected: Biomes not matched";
+                    const structurePositions = {};
+                    if (biomeValid) {
+                        let valid = true;
+                        let totalDistance = 0;
+                        for (const struct of structures) {
+                            const pos = getStructurePos(seed, struct, version, radius, filters);
+                            if (pos) {
+                                structurePositions[struct] = pos;
+                                totalDistance += pos[3];
+                            } else {
+                                valid = false;
+                                status = `Rejected: ${struct} not found`;
+                                break;
+                            }
+                        }
+                        if (valid && priority === "distance" && totalDistance > radius * structures.length * 0.3) {
+                            valid = false;
+                            status = "Rejected: Structures too far";
+                        }
+                        if (valid) {
+                            const biomeDist = analyzeBiomeDistribution(seed, version, 4000, "overworld");
+                            const biomeDistNether = analyzeBiomeDistribution(seed, version, 4000, "nether");
+                            logSeed(seed, version, biomes, structures, radius, filters, "Accepted", structurePositions);
+                            setCurrentSeed(Number(seed));
+                            setPositions(structurePositions);
+                            setBiomeDist(biomeDist);
+                            setBiomeDistNether(biomeDistNether);
+                            setResult(
+                                `Seed: ${seed}\n` +
+                                `Biomes: ${biomes.join(", ")}\n` +
+                                `Version: ${version}\n` +
+                                `Structures:\n` +
+                                Object.entries(structurePositions)
+                                    .sort((a, b) => a[1][3] - b[1][3])
+                                    .map(([_, [x, z, desc, dist]]) => `  ${desc} at (${x}, ${z}) (Distance: ${dist.toFixed(1)})`).join("\n") +
+                                `\nBiome Distribution (Overworld, 4000x4000 blocks):\n` +
+                                Object.entries(biomeDist)
+                                    .sort((a, b) => b[1] - a[1])
+                                    .map(([b, p]) => `  ${b}: ${p.toFixed(2)}%`).join("\n") +
+                                `\nBiome Distribution (Nether, 4000x4000 blocks):\n` +
+                                Object.entries(biomeDistNether)
+                                    .sort((a, b) => b[1] - a[1])
+                                    .map(([b, p]) => `  ${b}: ${p.toFixed(2)}%`).join("\n")
+                            );
+                            setIsRunning(false);
+                            return;
+                        }
+                    }
+                    logSeed(seed, version, biomes, structures, radius, filters, status, structurePositions);
+                    attempts++;
+                    if (attempts % 100 === 0) {
+                        setAttempts(attempts);
+                        setProgress(Math.min(attempts / maxAttempts * 100, 99.9));
+                        await new Promise(resolve => setTimeout(resolve, 0)); // Yield to UI
+                    }
+                }
+                setResult("No valid seed found. Try again!");
+                setIsRunning(false);
+            }
+
+            // Handle biome addition
+            function addBiome(biome) {
+                if (biomes.length < 3) setBiomes([...biomes, biome]);
+                else alert("Maximum 3 biomes allowed!");
+            }
+
+            // Handle structure toggle
+            function toggleStructure(struct) {
+                if (structures.includes(struct)) {
+                    setStructures(structures.filter(s => s !== struct));
+                } else if (structures.length < 3) {
+                    setStructures([...structures, struct]);
+                } else {
+                    alert("Maximum 3 structures allowed!");
+                }
+            }
+
+            // Save profile
+            function saveProfile() {
+                const name = prompt("Enter profile name:");
+                if (name) {
+                    const profile = { version, biomes, structures, radius, priority, filters };
+                    const newProfiles = { ...profiles, [name]: profile };
+                    setProfiles(newProfiles);
+                    localStorage.setItem("profiles", JSON.stringify(newProfiles));
+                    setSelectedProfile(name);
+                }
+            }
+
+            // Load profile
+            function loadProfile(name) {
+                if (profiles[name]) {
+                    const { version, biomes, structures, radius, priority, filters } = profiles[name];
+                    setVersion(version);
+                    setBiomes(biomes);
+                    setStructures(structures);
+                    setRadius(radius);
+                    setPriority(priority);
+                    setFilters(filters);
+                    setSelectedProfile(name);
+                }
+            }
+
+            // Delete profile
+            function deleteProfile() {
+                if (selectedProfile) {
+                    const newProfiles = { ...profiles };
+                    delete newProfiles[selectedProfile];
+                    setProfiles(newProfiles);
+                    localStorage.setItem("profiles", JSON.stringify(newProfiles));
+                    setSelectedProfile("");
+                }
+            }
+
+            // Export results
+            function exportResults() {
+                if (!currentSeed) return alert("No seed to export!");
+                const result = {
+                    seed: currentSeed, biomes, structures: positions, radius, version,
+                    biome_distribution_overworld: biomeDist, biome_distribution_nether: biomeDistNether,
+                    timestamp: new Date().toISOString(),
+                    criteria: { priority, ...filters }
+                };
+                const blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "seed_result.json";
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+
+            // Copy seed
+            function copySeed() {
+                if (currentSeed) {
+                    navigator.clipboard.writeText(String(currentSeed));
+                    alert("Seed copied to clipboard!");
+                }
+            }
+
+            // Handle canvas panning
+            function startPan(e) {
+                setPanStart({ x: e.clientX, y: e.clientY });
+            }
+            function pan(e) {
+                setPanOffset({
+                    x: panOffset.x + (e.clientX - panStart.x),
+                    y: panOffset.y + (e.clientY - panStart.y)
+                });
+                setPanStart({ x: e.clientX, y: e.clientY });
+            }
+
+            return (
+                <div className="flex h-screen bg-gray-900 text-gray-100">
+                    {/* Left Control Panel */}
+                    <div className="w-96 bg-gray-800 p-6 overflow-y-auto scrollbar-custom">
+                        <h1 className="text-2xl font-bold text-green-400 mb-6">Minecraft Seed Generator</h1>
+                        {/* Version Selection */}
+                        <label className="block text-sm mb-2">Minecraft Version:</label>
+                        <select
+                            value={version}
+                            onChange={e => setVersion(e.target.value)}
+                            className="w-full bg-gray-700 text-white p-2 rounded mb-4"
+                        >
+                            {["1.14", "1.15", "1.16", "1.17", "1.18", "1.19", "1.20", "1.21"].map(v => (
+                                <option key={v} value={v}>{v}</option>
+                            ))}
+                        </select>
+                        {/* Biome Selection */}
+                        <label className="block text-sm mb-2">Spawn Biomes (up to 3):</label>
+                        <div className="mb-4">
+                            {biomes.map((b, i) => (
+                                <select
+                                    key={i}
+                                    value={b}
+                                    onChange={e => setBiomes(biomes.map((b2, j) => i === j ? e.target.value : b2))}
+                                    className="w-full bg-gray-700 text-white p-2 rounded mb-2"
+                                >
+                                    {biomeOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                                </select>
+                            ))}
+                            <button
+                                onClick={() => addBiome(biomeOptions[0])}
+                                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
+                            >
+                                Add Biome
+                            </button>
+                        </div>
+                        {/* Structure Selection */}
+                        <label className="block text-sm mb-2">Structures (up to 3):</label>
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                            {structureOptions.map(s => (
+                                <label key={s} className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={structures.includes(s)}
+                                        onChange={() => toggleStructure(s)}
+                                        className="mr-2"
+                                    />
+                                    {s}
+                                </label>
+                            ))}
+                        </div>
+                        {/* Structure Filters */}
+                        <label className="block text-sm mb-2">Structure Filters:</label>
+                        <div className="mb-4">
+                            <label className="block text-xs mb-1">Temple Type:</label>
+                            <select
+                                value={filters.temple_type}
+                                onChange={e => setFilters({ ...filters, temple_type: e.target.value })}
+                                className="w-full bg-gray-700 text-white p-2 rounded mb-2"
+                            >
+                                {["Any", "Desert", "Jungle", "Swamp", "Igloo"].map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                            <label className="block text-xs mb-1">Bastion Type:</label>
+                            <select
+                                value={filters.bastion_type}
+                                onChange={e => setFilters({ ...filters, bastion_type: e.target.value })}
+                                className="w-full bg-gray-700 text-white p-2 rounded mb-2"
+                            >
+                                {["Any", "Hoglin Stable", "Housing Units", "Treasure", "Bridge"].map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                            <label className="block text-xs mb-1">Max Stronghold Distance:</label>
+                            <input
+                                type="number"
+                                value={filters.stronghold_distance}
+                                onChange={e => setFilters({ ...filters, stronghold_distance: parseFloat(e.target.value) || 0 })}
+                                className="w-full bg-gray-700 text-white p-2 rounded"
+                            />
+                        </div>
+                        {/* Priority Selection */}
+                        <label className="block text-sm mb-2">Priority:</label>
+                        <div className="mb-4">
+                            <label className="flex items-center mb-2">
+                                <input
+                                    type="radio"
+                                    name="priority"
+                                    value="none"
+                                    checked={priority === "none"}
+                                    onChange={e => setPriority(e.target.value)}
+                                    className="mr-2"
+                                />
+                                None
+                            </label>
+                            <label className="flex items-center">
+                                <input
+                                    type="radio"
+                                    name="priority"
+                                    value="distance"
+                                    checked={priority === "distance"}
+                                    onChange={e => setPriority(e.target.value)}
+                                    className="mr-2"
+                                />
+                                Closer Structures
+                            </label>
+                        </div>
+                        {/* Radius Slider */}
+                        <label className="block text-sm mb-2">Search Radius (blocks): {radius}</label>
+                        <input
+                            type="range"
+                            min="100"
+                            max="4000"
+                            value={radius}
+                            onChange={e => setRadius(parseInt(e.target.value))}
+                            className="w-full mb-4"
+                        />
+                        {/* Profile Management */}
+                        <label className="block text-sm mb-2">Saved Profiles:</label>
+                        <select
+                            value={selectedProfile}
+                            onChange={e => loadProfile(e.target.value)}
+                            className="w-full bg-gray-700 text-white p-2 rounded mb-2"
+                        >
+                            <option value="">Select Profile</option>
+                            {Object.keys(profiles).map(p => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                        <div className="flex gap-2 mb-4">
+                            <button
+                                onClick={saveProfile}
+                                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+                            >
+                                Save Profile
+                            </button>
+                            <button
+                                onClick={deleteProfile}
+                                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
+                            >
+                                Delete Profile
+                            </button>
+                        </div>
+                        {/* Controls */}
+                        <div className="flex flex-col gap-2 mb-4">
+                            <button
+                                onClick={findValidSeed}
+                                disabled={isRunning}
+                                className={`px-4 py-2 rounded transition ${isRunning ? "bg-gray-500 cursor-not-allowed" : "bg-green-500 hover:bg-green-600"} text-white`}
+                            >
+                                Generate Seed
+                            </button>
+                            <button
+                                onClick={() => { stopRef.current = true; setIsRunning(false); }}
+                                disabled={!isRunning}
+                                className={`px-4 py-2 rounded transition ${!isRunning ? "bg-gray-500 cursor-not-allowed" : "bg-red-500 hover:bg-red-600"} text-white`}
+                            >
+                                Stop Search
+                            </button>
+                            <button
+                                onClick={exportResults}
+                                disabled={!currentSeed}
+                                className={`px-4 py-2 rounded transition ${!currentSeed ? "bg-gray-500 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"} text-white`}
+                            >
+                                Export Results
+                            </button>
+                            <button
+                                onClick={copySeed}
+                                disabled={!currentSeed}
+                                className={`px-4 py-2 rounded transition ${!currentSeed ? "bg-gray-500 cursor-not-allowed" : "bg-purple-500 hover:bg-purple-600"} text-white`}
+                            >
+                                Copy Seed
+                            </button>
+                        </div>
+                        {/* Progress and Stats */}
+                        <div className="mb-4">
+                            <div className="w-full bg-gray-700 rounded-full h-2.5 mb-2">
+                                <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
+                            </div>
+                            <p className="text-sm">Attempts: {attempts} | Time: {((Date.now() - startTime) / 1000).toFixed(1)}s</p>
+                        </div>
+                        {/* Result Display */}
+                        <textarea
+                            value={result}
+                            readOnly
+                            className="w-full h-48 bg-gray-700 text-white p-2 rounded resize-none"
+                        />
+                    </div>
+                    {/* Right Map Panel */}
+                    <div className="flex-1 p-6">
+                        <h2 className="text-xl font-bold text-green-400 mb-4">Map Preview</h2>
+                        <div className="flex gap-4 mb-4">
+                            <label className="flex items-center">
+                                <input
+                                    type="radio"
+                                    name="dimension"
+                                    value="overworld"
+                                    checked={dimension === "overworld"}
+                                    onChange={e => setDimension(e.target.value)}
+                                    className="mr-2"
+                                />
+                                Overworld
+                            </label>
+                            <label className="flex items-center">
+                                <input
+                                    type="radio"
+                                    name="dimension"
+                                    value="nether"
+                                    checked={dimension === "nether"}
+                                    onChange={e => setDimension(e.target.value)}
+                                    className="mr-2"
+                                />
+                                Nether
+                            </label>
+                        </div>
+                        <canvas
+                            ref={canvasRef}
+                            width={600}
+                            height={600}
+                            className="border-2 border-gray-700 rounded"
+                            onMouseDown={startPan}
+                            onMouseMove={pan}
+                        />
+                        <label className="block text-sm mt-4 mb-2">Zoom: {zoom.toFixed(1)}x</label>
+                        <input
+                            type="range"
+                            min="0.5"
+                            max="4.0"
+                            step="0.1"
+                            value={zoom}
+                            onChange={e => setZoom(parseFloat(e.target.value))}
+                            className="w-full"
+                        />
+                    </div>
+                </div>
+            );
+        }
+
+        // Render App
+        ReactDOM.render(<App />, document.getElementById("root"));
+    </script>
+</body>
+</html>
