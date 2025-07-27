@@ -1,4 +1,8 @@
-<!DOCTYPE html>
+if (attempts % 10 === 0) { // Changed from 100 to 10
+    setAttempts(attempts);
+    setProgress(Math.min(attempts / maxAttempts * 100, 99.9));
+    await new Promise(resolve => setTimeout(resolve, 0));
+}
 <html lang="en">
 <head>
     <meta charset="UTF-8">
