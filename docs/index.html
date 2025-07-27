@@ -1,9 +1,5 @@
-if (attempts % 10 === 0) { // Changed from 100 to 10
-    setAttempts(attempts);
-    setProgress(Math.min(attempts / maxAttempts * 100, 99.9));
-    await new Promise(resolve => setTimeout(resolve, 0));
-}
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en"></html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -119,20 +115,14 @@ if (attempts % 10 === 0) { // Changed from 100 to 10
             const versionNum = parseFloat(version);
             // Simple string hash function
             const hashCode = str => {
-                let hash = 0;
-                for (let i = 0; i < str.length; i++) {
-                    const char = str.charCodeAt(i);
-                    hash = ((hash << 5) - hash) + char;
-                    hash = hash & hash;
-                }
-                return hash;
-            };
-            const rand = new MinecraftRandom(seed + hashCode(structure));
-            const chunkSize = 16;
-            const spacing = {
-                Village: 34, Mineshaft: 8, Stronghold: versionNum < 1.18 ? 100 : 200,
-                Temple: 32, Monument: 29, Mansion: 80, "Bastion Remnant": 30,
-                "Ancient City": 24, "Nether Fortress": 27, "Trial Chambers": 32
+        // Structure position calculation
+        function getStructurePos(seed, structure, version, radius, filters = {}) {
+            const versionNum = parseFloat(version);
+            let structureSeed = seed;
+            for (let i = 0; i < structure.length; i++) {
+                structureSeed = (structureSeed * 31 + structure.charCodeAt(i)) | 0;
+            }
+            const rand = new MinecraftRandom(seed + BigInt(structureSeed));
             };
             const minDist = {
                 Village: 8, Mineshaft: 1, Stronghold: 1, Temple: 8, Monument: 5,
