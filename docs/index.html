@@ -19,6 +19,54 @@
 <body>
     <div id="root"></div>
     <script type="text/babel">
+        // Constants for structure generation and biome analysis
+        const Constants = {
+            STRUCTURES: {
+                Village: { spacing: 32, minDist: 8, weight: 1.0, yRange: [-64, 319] },
+                Mineshaft: { spacing: 1, minDist: 1, weight: 0.8, yRange: [-64, 30] },
+                Stronghold: { spacing: 16, minDist: 1, weight: 1.0, yRange: [-64, 30] },
+                Temple: { spacing: 32, minDist: 8, weight: 0.9, yRange: [-64, 319] },
+                Monument: { spacing: 32, minDist: 5, weight: 0.7, yRange: [0, 63] },
+                Mansion: { spacing: 80, minDist: 20, weight: 0.5, yRange: [60, 319] },
+                "Bastion Remnant": { spacing: 27, minDist: 10, weight: 0.8, yRange: [0, 128] },
+                "Ancient City": { spacing: 24, minDist: 8, weight: 0.7, yRange: [-64, 0] },
+                "Nether Fortress": { spacing: 16, minDist: 5, weight: 0.9, yRange: [0, 128] },
+                "Trial Chambers": { spacing: 32, minDist: 8, weight: 0.6, yRange: [-64, 30] }
+            },
+            BIOME_WEIGHTS: {
+                OVERWORLD: {
+                    Plains: 0.35, Forest: 0.25, Desert: 0.15, Taiga: 0.15,
+                    Swamp: 0.10, Jungle: 0.05, Savanna: 0.12, Badlands: 0.05,
+                    "Mushroom Fields": 0.005, "Deep Dark": 0.04, "Mangrove Swamp": 0.05,
+                    "Cherry Grove": 0.03, "Lush Caves": 0.04, "Snowy Plains": 0.08,
+                    Ocean: 0.25, Meadow: 0.05, "Bamboo Jungle": 0.02
+                },
+                NETHER: {
+                    "Nether Wastes": 0.30, "Crimson Forest": 0.25, "Warped Forest": 0.25,
+                    "Soul Sand Valley": 0.15, "Basalt Deltas": 0.05
+                }
+            },
+            CHUNK_SIZE: 16,
+            MAX_HEIGHT: 319,
+            MIN_HEIGHT: -64,
+            SEARCH_ITERATIONS: 20000,
+            STRUCTURE_REGION_BITS: 12,
+            MAX_CACHED_RESULTS: 1000
+        };
+        const chunkSize = 16;
+        const spacing = {
+            Village: 32,
+            Mineshaft: 1,
+            Stronghold: 16,
+            Temple: 32,
+            Monument: 32,
+            Mansion: 80,
+            "Bastion Remnant": 27,
+            "Ancient City": 24,
+            "Nether Fortress": 16,
+            "Trial Chambers": 32
+        };
+
         // Minecraft Random (Java Random implementation)
         class MinecraftRandom {
             constructor(seed) {
@@ -98,10 +146,15 @@
                 const biomeId = Math.floor((noise + 1) * Object.values(biomeMap).reduce((s, [_, w]) => s + w, 0) / 2 * 100);
                 let cumWeight = 0;
                 for (const [biome, [id, weight]] of Object.entries(biomeMap)) {
-                    cumWeight += weight * 100;
-                    if (biomeId <= cumWeight) return [biome, id];
-                }
-            } else {
+        // Simple string hash function
+        const hashCode = str => {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                hash = hash & hash;
+            }
+            return hash;
+        };
                 const rand = new MinecraftRandom(Number(noiseSeed));
                 const biomeId = rand.nextInt(Object.keys(biomeMap).length);
                 const biomeName = Object.keys(biomeMap)[biomeId % Object.keys(biomeMap).length];
