@@ -1,34 +1,195 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Minecraft Seed Generator Ultimate</title>
     <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
-        body { background-color: #1a1a1a; color: #e0e0e0; font-family: 'Arial', sans-serif; }
+        body { background-color: #1a1a1a; color: #e0e0e0; font-family: 'Arial', sans-serif; margin: 0; padding: 0; }
         .scrollbar-custom::-webkit-scrollbar { width: 8px; }
         .scrollbar-custom::-webkit-scrollbar-track { background: #2b2b2b; }
         .scrollbar-custom::-webkit-scrollbar-thumb { background: #4caf50; border-radius: 4px; }
         .scrollbar-custom::-webkit-scrollbar-thumb:hover { background: #66bb6a; }
+        .container { display: flex; flex-direction: column; min-height: 100vh; }
+        @media (min-width: 768px) {
+            .container { flex-direction: row; }
+        }
+        .panel { padding: 1.5rem; }
+        .control-panel { 
+            width: 100%; 
+            background-color: #1f2937; 
+            order: 2; 
+        }
+        @media (min-width: 768px) {
+            .control-panel { 
+                width: 24rem; 
+                order: 1; 
+                max-height: 100vh; 
+                overflow-y: auto; 
+            }
+        }
+        .map-panel { 
+            flex: 1; 
+            padding: 1rem; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            order: 1; 
+        }
+        @media (min-width: 768px) {
+            .map-panel { 
+                order: 2; 
+                padding: 1.5rem; 
+            }
+        }
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            height: 400px;
+        }
+        canvas {
+            border: 2px solid #374151;
+            border-radius: 0.5rem;
+            background-color: #111827;
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            border: none;
+            font-weight: 500;
+            transition: all 0.2s;
+            cursor: pointer;
+            text-align: center;
+        }
+        .btn-primary { background-color: #10b981; color: white; }
+        .btn-primary:hover { background-color: #0d9488; }
+        .btn-primary:disabled { background-color: #6b7280; cursor: not-allowed; }
+        .btn-secondary { background-color: #3b82f6; color: white; }
+        .btn-secondary:hover { background-color: #2563eb; }
+        .btn-danger { background-color: #ef4444; color: white; }
+        .btn-danger:hover { background-color: #dc2626; }
+        .btn-warning { background-color: #f59e0b; color: white; }
+        .btn-warning:hover { background-color: #d97706; }
+        .btn-success { background-color: #10b981; color: white; }
+        .btn-success:hover { background-color: #0d9488; }
+        .input, select {
+            width: 100%;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            border: 1px solid #4b5563;
+            background-color: #374151;
+            color: white;
+            margin-bottom: 0.5rem;
+        }
+        .input-range {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+        .error-message {
+            color: #ef4444;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            background-color: #3f1717;
+            border-radius: 0.375rem;
+        }
+        .progress-container {
+            width: 100%;
+            height: 0.5rem;
+            background-color: #374151;
+            border-radius: 999px;
+            margin-bottom: 0.5rem;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #10b981;
+            border-radius: 999px;
+            transition: width 0.2s;
+        }
+        .result-textarea {
+            width: 100%;
+            min-height: 120px;
+            background-color: #374151;
+            color: white;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            resize: vertical;
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+        .flex {
+            display: flex;
+        }
+        .flex-col {
+            flex-direction: column;
+        }
+        .flex-row {
+            flex-direction: row;
+        }
+        .gap-2 {
+            gap: 0.5rem;
+        }
+        .gap-4 {
+            gap: 1rem;
+        }
+        .mb-2 {
+            margin-bottom: 0.5rem;
+        }
+        .mb-4 {
+            margin-bottom: 1rem;
+        }
+        .mt-4 {
+            margin-top: 1rem;
+        }
+        .text-sm {
+            font-size: 0.875rem;
+        }
+        .text-lg {
+            font-size: 1.125rem;
+        }
+        .font-bold {
+            font-weight: 700;
+        }
+        .text-green-400 {
+            color: #10b981;
+        }
+        .grid {
+            display: grid;
+        }
+        .grid-cols-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        .items-center {
+            align-items: center;
+        }
+        .justify-between {
+            justify-content: space-between;
+        }
     </style>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        // Constants for structure generation and biome analysis
+        // Enhanced Constants with improved structure data
         const Constants = {
             STRUCTURES: {
-                Village: { spacing: 32, minDist: 8, weight: 1.0, yRange: [-64, 319], types: ["Plains", "Desert", "Savanna", "Snowy", "Taiga"] },
+                Village: { spacing: 32, minDist: 8, weight: 1.0, yRange: [-64, 319], types: ["Plains", "Desert", "Savanna", "Snowy", "Taiga", "Meadow"] },
                 Mineshaft: { spacing: 1, minDist: 1, weight: 0.8, yRange: [-64, 30], types: ["Normal", "Mesa"] },
                 Stronghold: { spacing: 16, minDist: 1, weight: 1.0, yRange: [-64, 30], special: true },
                 Temple: { spacing: 32, minDist: 8, weight: 0.9, yRange: [-64, 319], types: ["Desert", "Jungle", "Swamp", "Igloo"] },
                 Monument: { spacing: 32, minDist: 5, weight: 0.7, yRange: [0, 63], underwater: true },
                 Mansion: { spacing: 80, minDist: 20, weight: 0.5, yRange: [60, 319], exclusive: true },
-                "Bastion Remnant": { spacing: 27, minDist: 10, weight: 0.8, yRange: [0, 128], types: ["Bridge", "Hoglin Stable", "Housing", "Treasure"] },
+                "Bastion Remnant": { spacing: 27, minDist: 10, weight: 0.8, yRange: [0, 128], types: ["Bridge", "Hoglin Stable", "Housing Units", "Treasure"] },
                 "Ancient City": { spacing: 24, minDist: 8, weight: 0.7, yRange: [-64, 0], deepslate: true },
                 "Nether Fortress": { spacing: 16, minDist: 5, weight: 0.9, yRange: [0, 128], nether: true },
                 "Trial Chambers": { spacing: 32, minDist: 8, weight: 0.6, yRange: [-64, 30], types: ["Small", "Medium", "Large"] },
@@ -42,7 +203,8 @@
                     "Deep Dark": 0.04, "Mangrove Swamp": 0.05, "Cherry Grove": 0.03,
                     "Lush Caves": 0.04, "Snowy Plains": 0.08, Ocean: 0.25,
                     Meadow: 0.05, "Bamboo Jungle": 0.02, "Frozen Ocean": 0.08,
-                    "Birch Forest": 0.12, "Dark Forest": 0.08
+                    "Birch Forest": 0.12, "Dark Forest": 0.08, "Giant Tree Taiga": 0.06,
+                    "Stone Shore": 0.03, "River": 0.15, "Beach": 0.05
                 },
                 NETHER: {
                     "Nether Wastes": 0.30, "Crimson Forest": 0.25, "Warped Forest": 0.25,
@@ -57,19 +219,22 @@
                 CHUNK_SIZE: 16,
                 MAX_HEIGHT: 319,
                 MIN_HEIGHT: -64,
-                SEARCH_ITERATIONS: 20000,
+                SEARCH_ITERATIONS: 50000, // Increased from 20000
                 STRUCTURE_REGION_BITS: 12,
                 MAX_CACHED_RESULTS: 1000,
                 NOISE_OCTAVES: 8,
                 NOISE_PERSISTENCE: 0.5,
-                NOISE_SCALE: 0.007
+                NOISE_SCALE: 0.007,
+                BIOME_ANALYSIS_RADIUS: 4000,
+                SPAWN_CHECK_RADIUS: 32
             },
             LOOT_TABLES: {
-                Village: ["iron", "food", "emeralds"],
-                Temple: ["gold", "diamonds", "emeralds"],
-                Monument: ["gold", "sponge", "prismarine"],
-                "Ancient City": ["echo_shards", "disc_fragments", "enchanted_books"],
-                "Nether Fortress": ["nether_wart", "blaze_rods", "wither_skulls"]
+                Village: ["iron", "food", "emeralds", "tools", "armor"],
+                Temple: ["gold", "diamonds", "emeralds", "potions", "enchanted_books"],
+                Monument: ["gold", "sponge", "prismarine", "tridents", "nautilus_shells"],
+                "Ancient City": ["echo_shards", "disc_fragments", "enchanted_books", "suspicious_stew", "ward_armor"],
+                "Nether Fortress": ["nether_wart", "blaze_rods", "wither_skulls", "gold", "netherite_scrap"],
+                "Trial Chambers": ["diamonds", "enchanted_equipment", "trial_key", "experience_bottles"]
             }
         };
 
@@ -80,956 +245,1414 @@
             })
         );
 
-        // Minecraft Random (Function-based implementation)
+        // Enhanced Minecraft Random with better seed handling
         function MinecraftRandom(seed) {
-            var instanceSeed = BigInt(seed) & ((BigInt(1) << BigInt(48)) - BigInt(1));
-
+            // Ensure seed is a BigInt and properly masked
+            let instanceSeed = typeof seed === 'bigint' ? seed : BigInt(seed);
+            instanceSeed = instanceSeed & ((BigInt(1) << BigInt(48)) - BigInt(1));
+            
             return {
                 nextInt: function(bound) {
+                    if (bound <= 0) throw new Error("Bound must be positive");
                     instanceSeed = (instanceSeed * BigInt(0x5DEECE66D) + BigInt(0xB)) & ((BigInt(1) << BigInt(48)) - BigInt(1));
                     return Number(instanceSeed >> BigInt(16)) % bound;
                 },
                 nextFloat: function() {
                     instanceSeed = (instanceSeed * BigInt(0x5DEECE66D) + BigInt(0xB)) & ((BigInt(1) << BigInt(48)) - BigInt(1));
                     return Number(instanceSeed >> BigInt(24)) / (1 << 24);
+                },
+                nextLong: function() {
+                    instanceSeed = (instanceSeed * BigInt(0x5DEECE66D) + BigInt(0xB)) & ((BigInt(1) << BigInt(48)) - BigInt(1));
+                    return instanceSeed;
                 }
             };
         }
 
-        // Perlin Noise simulation
+        // Enhanced Perlin Noise with better interpolation
         function perlinNoise(x, z, seed, scale, octaves) {
-            if (scale === undefined) scale = 0.007;
-            if (octaves === undefined) octaves = 8;
-            var total = 0;
-            for (var i = 0; i < octaves; i++) {
-                var freq = scale * Math.pow(2, i);
-                var amp = Math.pow(0.5, i);
-                var rand = MinecraftRandom(seed + i * 1000);
-                var gridX = Math.floor(x * freq), gridZ = Math.floor(z * freq);
-                var n00 = rand.nextFloat() * 2 - 1;
-                var n10 = rand.nextFloat() * 2 - 1;
-                var n01 = rand.nextFloat() * 2 - 1;
-                var n11 = rand.nextFloat() * 2 - 1;
-                var fx = x * freq - gridX, fz = z * freq - gridZ;
-                var u = fx * fx * (3 - 2 * fx), v = fz * fz * (3 - 2 * fz);
-                var lerpX0 = n00 + u * (n10 - n00);
-                var lerpX1 = n01 + u * (n11 - n01);
-                total += (lerpX0 + v * (lerpX1 - lerpX0)) * amp;
+            if (scale === undefined) scale = Constants.WORLD_SETTINGS.NOISE_SCALE;
+            if (octaves === undefined) octaves = Constants.WORLD_SETTINGS.NOISE_OCTAVES;
+            
+            let total = 0;
+            let frequency, amplitude;
+            
+            for (let i = 0; i < octaves; i++) {
+                frequency = scale * Math.pow(2, i);
+                amplitude = Math.pow(Constants.WORLD_SETTINGS.NOISE_PERSISTENCE, i);
+                
+                // Use the seed to create a unique random generator for each octave
+                const randSeed = seed + BigInt(i * 1000);
+                const rand = MinecraftRandom(randSeed);
+                
+                // Grid coordinates
+                const gridX = Math.floor(x * frequency);
+                const gridZ = Math.floor(z * frequency);
+                
+                // Random values at grid points
+                const n00 = rand.nextFloat() * 2 - 1;
+                const n10 = rand.nextFloat() * 2 - 1;
+                const n01 = rand.nextFloat() * 2 - 1;
+                const n11 = rand.nextFloat() * 2 - 1;
+                
+                // Fractional part for interpolation
+                const fx = (x * frequency) - gridX;
+                const fz = (z * frequency) - gridZ;
+                
+                // Improved interpolation using smootherstep
+                const u = fx * fx * (3 - 2 * fx); // Smoothstep
+                const v = fz * fz * (3 - 2 * fz);
+                
+                // Bilinear interpolation
+                const lerpX0 = n00 + u * (n10 - n00);
+                const lerpX1 = n01 + u * (n11 - n01);
+                const noiseValue = lerpX0 + v * (lerpX1 - lerpX0);
+                
+                total += noiseValue * amplitude;
             }
+            
             return total;
         }
 
-        // Get biome at position
+        // Get biome at position with enhanced accuracy
         function getBiomeAt(seed, x, z, version, dimension) {
-            if (dimension === undefined) dimension = "overworld";
-            var biomeMap = Constants.BIOME_WEIGHTS[dimension.toUpperCase()] || Constants.BIOME_WEIGHTS.OVERWORLD;
-            var noiseSeed = BigInt(seed) + BigInt(x) * BigInt(341873128712) + BigInt(z) * BigInt(132897987541);
-            var noise = perlinNoise(x, z, Number(noiseSeed), Constants.WORLD_SETTINGS.NOISE_SCALE, Constants.WORLD_SETTINGS.NOISE_OCTAVES);
-            var biomeId = Math.floor((noise + 1) * 100);
-            var cumWeight = 0;
-            for (var biome in biomeMap) {
-                cumWeight += biomeMap[biome] * 100;
-                if (biomeId <= cumWeight) return [biome, 1];
-            }
-            return ["Plains", 1];
-        }
-
-        // Structure position calculation
-        function getStructurePos(seed, structure, version, radius, filters) {
-            if (filters === undefined) filters = {};
-            var versionNum = parseFloat(version);
-            var biomeRequirements = {
-                Village: ["Plains", "Desert", "Savanna", "Taiga", "Meadow"],
-                Temple: ["Desert", "Jungle", "Swamp", "Snowy Plains"],
-                Monument: ["Ocean"],
-                Mansion: ["Forest"],
-                "Ancient City": ["Deep Dark"],
-                "Bastion Remnant": ["Nether Wastes", "Crimson Forest", "Warped Forest", "Soul Sand Valley", "Basalt Deltas"],
-                "Nether Fortress": ["Nether Wastes", "Crimson Forest", "Warped Forest", "Soul Sand Valley", "Basalt Deltas"],
-                "Trial Chambers": ["Deep Dark"]
-            };
-            var structureSeed = seed;
-            for (var i = 0; i < structure.length; i++) {
-                structureSeed = (structureSeed * 31 + structure.charCodeAt(i)) | 0;
-            }
-            var rand = MinecraftRandom(seed + BigInt(structureSeed));
-            var minDist = Constants.STRUCTURES[structure].minDist;
-            var blockX, blockZ;
-            if (structure === "Stronghold" && versionNum < 1.18) {
-                var ring = rand.nextInt(3);
-                var minRadius = [1408, 2720, 4032][ring];
-                var maxRadius = [2688, 4000, 5312][ring];
-                var angle = rand.nextFloat() * 2 * Math.PI;
-                var distance = minRadius + rand.nextFloat() * (maxRadius - minRadius);
-                blockX = Math.round(Math.cos(angle) * distance);
-                blockZ = Math.round(Math.sin(angle) * distance);
-            } else {
-                var regionSize = spacing[structure] * Constants.WORLD_SETTINGS.CHUNK_SIZE;
-                var regionX = rand.nextInt(Math.floor(radius / regionSize * 2)) - Math.floor(radius / regionSize);
-                var regionZ = rand.nextInt(Math.floor(radius / regionSize * 2)) - Math.floor(radius / regionSize);
-                blockX = (regionX * regionSize) + rand.nextInt(regionSize);
-                blockZ = (regionZ * regionSize) + rand.nextInt(regionSize);
-            }
-            var distance = Math.sqrt(blockX * blockX + blockZ * blockZ);
-            if (distance <= radius && distance >= minDist * Constants.WORLD_SETTINGS.CHUNK_SIZE) {
-                if (filters.stronghold_distance && structure === "Stronghold" && distance > filters.stronghold_distance) {
-                    return null;
-                }
-                var dimension = ["Bastion Remnant", "Nether Fortress"].indexOf(structure) !== -1 ? "nether" : "overworld";
-                var offsets = [[0, 0], [8, 8], [-8, -8], [8, -8], [-8, 8]];
-                for (var i = 0; i < offsets.length; i++) {
-                    var offset = offsets[i];
-                    var dx = offset[0], dz = offset[1];
-                    var biomeResult = getBiomeAt(seed, blockX + dx, blockZ + dz, version, dimension);
-                    var biome = biomeResult[0];
-                    if (!biomeRequirements[structure] || biomeRequirements[structure].indexOf(biome) === -1) return null;
-                }
-                var desc = structure;
-                if (structure === "Temple") {
-                    var templeTypes = ["Desert", "Jungle", "Swamp", "Igloo"];
-                    var templeType = templeTypes[rand.nextInt(templeTypes.length)];
-                    if (filters.temple_type && filters.temple_type !== "Any" && templeType !== filters.temple_type) return null;
-                    desc = "Temple (" + templeType + ")";
-                } else if (structure === "Bastion Remnant") {
-                    var bastionTypes = ["Hoglin Stable", "Housing Units", "Treasure", "Bridge"];
-                    var bastionType = bastionTypes[rand.nextInt(bastionTypes.length)];
-                    if (filters.bastion_type && filters.bastion_type !== "Any" && bastionType !== filters.bastion_type) return null;
-                    desc = "Bastion Remnant (" + bastionType + ")";
-                }
-                return [blockX, blockZ, desc, distance];
-            }
-            return null;
-        }
-
-        // Biome distribution analysis
-        function analyzeBiomeDistribution(seed, version, radius, dimension) {
-            if (radius === undefined) radius = 4000;
-            if (dimension === undefined) dimension = "overworld";
-            var biomeCounts = {};
-            var step = Math.floor(radius / 50);
-            var points = Array.from({ length: 100 }, function(_, i) {
-                return -radius + (i * 2 * radius) / 99;
-            });
-            for (var i = 0; i < points.length; i++) {
-                var x = points[i];
-                for (var j = 0; j < points.length; j++) {
-                    var z = points[j];
-                    var biomeResult = getBiomeAt(seed, Math.floor(x), Math.floor(z), version, dimension);
-                    var biome = biomeResult[0];
-                    biomeCounts[biome] = (biomeCounts[biome] || 0) + 1;
-                }
-            }
-            var total = Object.values(biomeCounts).reduce(function(s, c) { return s + c; }, 0);
-            var result = {};
-            for (var b in biomeCounts) {
-                result[b] = (biomeCounts[b] / total * 100);
-            }
-            return result;
-        }
-
-        // Log seed to localStorage
-        function logSeed(seed, version, biomes, structures, radius, filters, status, structurePositions) {
-            if (structurePositions === undefined) structurePositions = null;
             try {
-                var timestamp = new Date().toISOString();
-                var logEntry = {
-                    timestamp: timestamp,
-                    seed: seed,
-                    version: version,
-                    biomes: biomes,
-                    structures: structures,
-                    radius: radius,
-                    filters: filters,
-                    status: status,
-                    spawnBiomes: Array.from({ length: 25 }, function(_, i) {
-                        var x = [-32, -16, 0, 16, 32][Math.floor(i / 5)];
-                        var z = [-32, -16, 0, 16, 32][i % 5];
-                        var biomeResult = getBiomeAt(seed, x, z, version, "overworld");
-                        var biome = biomeResult[0];
-                        return "(" + x + ", " + z + "): " + biome;
-                    }),
-                    structurePositions: structurePositions
+                if (typeof seed === 'string') {
+                    seed = BigInt(seed);
+                }
+                
+                if (dimension === undefined) dimension = "overworld";
+                const biomeMap = Constants.BIOME_WEIGHTS[dimension.toUpperCase()] || Constants.BIOME_WEIGHTS.OVERWORLD;
+                
+                // Use a more complex noise seed calculation
+                const noiseSeed = seed + BigInt(x) * BigInt(341873128712) + BigInt(z) * BigInt(132897987541);
+                const noise = perlinNoise(x, z, noiseSeed, Constants.WORLD_SETTINGS.NOISE_SCALE, Constants.WORLD_SETTINGS.NOISE_OCTAVES);
+                
+                // Map noise to biome index with better distribution
+                const biomeId = Math.floor((noise + 1) * 100);
+                let cumWeight = 0;
+                
+                for (const biome in biomeMap) {
+                    cumWeight += biomeMap[biome] * 100;
+                    if (biomeId <= cumWeight) {
+                        return [biome, 1];
+                    }
+                }
+                
+                // Fallback biome
+                return ["Plains", 1];
+            } catch (error) {
+                console.error("Error in getBiomeAt:", error);
+                return ["Plains", 1];
+            }
+        }
+
+        // Structure position calculation with improved accuracy
+        function getStructurePos(seed, structure, version, radius, filters) {
+            try {
+                if (filters === undefined) filters = {};
+                const versionNum = parseFloat(version);
+                
+                // Define biome requirements for structures
+                const biomeRequirements = {
+                    Village: ["Plains", "Desert", "Savanna", "Taiga", "Meadow", "Snowy Plains"],
+                    Temple: ["Desert", "Jungle", "Swamp", "Snowy Plains"],
+                    Monument: ["Ocean", "Deep Ocean", "Warm Ocean"],
+                    Mansion: ["Dark Forest", "Flower Forest"],
+                    "Ancient City": ["Deep Dark"],
+                    "Bastion Remnant": ["Nether Wastes", "Crimson Forest", "Warped Forest", "Soul Sand Valley", "Basalt Deltas"],
+                    "Nether Fortress": ["Nether Wastes", "Crimson Forest", "Warped Forest", "Soul Sand Valley", "Basalt Deltas"],
+                    "Trial Chambers": ["Deep Dark"],
+                    "Stronghold": ["Plains", "Desert", "Forest", "Taiga", "Jungle", "Swamp", "Mesa"]
                 };
-                var logs = JSON.parse(localStorage.getItem("seedLogs") || "[]");
-                logs.push(logEntry);
-                if (logs.length > 100) logs.shift();
-                localStorage.setItem("seedLogs", JSON.stringify(logs));
-            } catch (e) {
-                console.error("Failed to save log to localStorage:", e);
+                
+                // Calculate structure-specific seed
+                let structureSeed = seed;
+                for (let i = 0; i < structure.length; i++) {
+                    structureSeed = (structureSeed * 31 + BigInt(structure.charCodeAt(i))) & ((BigInt(1) << BigInt(48)) - BigInt(1));
+                }
+                
+                const rand = MinecraftRandom(seed + structureSeed);
+                const minDist = Constants.STRUCTURES[structure].minDist;
+                let blockX, blockZ;
+                
+                // Special handling for Stronghold in older versions
+                if (structure === "Stronghold" && versionNum < 1.18) {
+                    const ring = rand.nextInt(3);
+                    const minRadius = [1408, 2720, 4032][ring];
+                    const maxRadius = [2688, 4000, 5312][ring];
+                    const angle = rand.nextFloat() * 2 * Math.PI;
+                    const distance = minRadius + rand.nextFloat() * (maxRadius - minRadius);
+                    blockX = Math.round(Math.cos(angle) * distance);
+                    blockZ = Math.round(Math.sin(angle) * distance);
+                } else {
+                    // Standard structure placement
+                    const regionSize = spacing[structure] * Constants.WORLD_SETTINGS.CHUNK_SIZE;
+                    const maxRegions = Math.floor(radius / regionSize);
+                    
+                    // Random region selection with better distribution
+                    const regionX = rand.nextInt(maxRegions * 2) - maxRegions;
+                    const regionZ = rand.nextInt(maxRegions * 2) - maxRegions;
+                    
+                    // Random position within region
+                    blockX = (regionX * regionSize) + rand.nextInt(regionSize);
+                    blockZ = (regionZ * regionSize) + rand.nextInt(regionSize);
+                }
+                
+                // Calculate distance from origin
+                const distance = Math.sqrt(blockX * blockX + blockZ * blockZ);
+                
+                // Check if position is within radius and minimum distance
+                if (distance <= radius && distance >= minDist * Constants.WORLD_SETTINGS.CHUNK_SIZE) {
+                    // Apply stronghold distance filter
+                    if (filters.stronghold_distance && structure === "Stronghold" && distance > filters.stronghold_distance) {
+                        return null;
+                    }
+                    
+                    // Determine dimension for biome check
+                    const checkDimension = ["Bastion Remnant", "Nether Fortress"].includes(structure) ? "nether" : "overworld";
+                    
+                    // Check multiple points around structure for biome compatibility
+                    const checkOffsets = [
+                        [0, 0], [8, 8], [-8, -8], [8, -8], [-8, 8],
+                        [16, 0], [-16, 0], [0, 16], [0, -16]
+                    ];
+                    
+                    for (const offset of checkOffsets) {
+                        const dx = offset[0], dz = offset[1];
+                        const biomeResult = getBiomeAt(seed, blockX + dx, blockZ + dz, version, checkDimension);
+                        const biome = biomeResult[0];
+                        
+                        // Skip biome check for structures without specific requirements
+                        if (biomeRequirements[structure] && !biomeRequirements[structure].includes(biome)) {
+                            return null;
+                        }
+                    }
+                    
+                    // Add structure-specific description
+                    let desc = structure;
+                    if (structure === "Temple") {
+                        const templeTypes = ["Desert", "Jungle", "Swamp", "Igloo"];
+                        const templeType = templeTypes[rand.nextInt(templeTypes.length)];
+                        if (filters.temple_type && filters.temple_type !== "Any" && templeType !== filters.temple_type) return null;
+                        desc = "Temple (" + templeType + ")";
+                    } else if (structure === "Bastion Remnant") {
+                        const bastionTypes = ["Hoglin Stable", "Housing Units", "Treasure", "Bridge"];
+                        const bastionType = bastionTypes[rand.nextInt(bastionTypes.length)];
+                        if (filters.bastion_type && filters.bastion_type !== "Any" && bastionType !== filters.bastion_type) return null;
+                        desc = "Bastion Remnant (" + bastionType + ")";
+                    } else if (structure === "Trial Chambers") {
+                        const chamberTypes = ["Small", "Medium", "Large"];
+                        const chamberType = chamberTypes[rand.nextInt(chamberTypes.length)];
+                        desc = "Trial Chambers (" + chamberType + ")";
+                    }
+                    
+                    return [blockX, blockZ, desc, distance];
+                }
+                
+                return null;
+            } catch (error) {
+                console.error("Error in getStructurePos:", error);
+                return null;
+            }
+        }
+
+        // Enhanced biome distribution analysis
+        function analyzeBiomeDistribution(seed, version, radius, dimension) {
+            try {
+                if (radius === undefined) radius = Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS;
+                if (dimension === undefined) dimension = "overworld";
+                
+                const biomeCounts = {};
+                const step = Math.floor(radius / 100); // More granular sampling
+                const points = Array.from({ length: 200 }, (_, i) => -radius + (i * 2 * radius) / 199);
+                
+                // Sample biome distribution
+                for (let i = 0; i < points.length; i++) {
+                    const x = Math.floor(points[i]);
+                    for (let j = 0; j < points.length; j++) {
+                        const z = Math.floor(points[j]);
+                        const biomeResult = getBiomeAt(seed, x, z, version, dimension);
+                        const biome = biomeResult[0];
+                        biomeCounts[biome] = (biomeCounts[biome] || 0) + 1;
+                    }
+                }
+                
+                // Calculate percentages
+                const total = Object.values(biomeCounts).reduce((sum, count) => sum + count, 0);
+                const result = {};
+                
+                for (const biome in biomeCounts) {
+                    result[biome] = (biomeCounts[biome] / total * 100);
+                }
+                
+                return result;
+            } catch (error) {
+                console.error("Error in analyzeBiomeDistribution:", error);
+                return {};
             }
         }
 
         // Main React App
         function App() {
-            var versionState = React.useState("1.21");
-            var version = versionState[0], setVersion = versionState[1];
-            var biomesState = React.useState(["Plains"]);
-            var biomes = biomesState[0], setBiomes = biomesState[1];
-            var structuresState = React.useState([]);
-            var structures = structuresState[0], setStructures = structuresState[1];
-            var radiusState = React.useState(500);
-            var radius = radiusState[0], setRadius = radiusState[1];
-            var priorityState = React.useState("none");
-            var priority = priorityState[0], setPriority = priorityState[1];
-            var filtersState = React.useState({ temple_type: "Any", bastion_type: "Any", stronghold_distance: 0 });
-            var filters = filtersState[0], setFilters = filtersState[1];
-            var currentSeedState = React.useState(null);
-            var currentSeed = currentSeedState[0], setCurrentSeed = currentSeedState[1];
-            var positionsState = React.useState({});
-            var positions = positionsState[0], setPositions = positionsState[1];
-            var biomeDistState = React.useState({});
-            var biomeDist = biomeDistState[0], setBiomeDist = biomeDistState[1];
-            var biomeDistNetherState = React.useState({});
-            var biomeDistNether = biomeDistNetherState[0], setBiomeDistNether = biomeDistNetherState[1];
-            var isRunningState = React.useState(false);
-            var isRunning = isRunningState[0], setIsRunning = isRunningState[1];
-            var progressState = React.useState(0);
-            var progress = progressState[0], setProgress = progressState[1];
-            var attemptsState = React.useState(0);
-            var attempts = attemptsState[0], setAttempts = attemptsState[1];
-            var startTimeState = React.useState(0);
-            var startTime = startTimeState[0], setStartTime = startTimeState[1];
-            var resultState = React.useState("");
-            var result = resultState[0], setResult = resultState[1];
-            var dimensionState = React.useState("overworld");
-            var dimension = dimensionState[0], setDimension = dimensionState[1];
-            var zoomState = React.useState(1.0);
-            var zoom = zoomState[0], setZoom = zoomState[1];
-            var panOffsetState = React.useState({ x: 0, y: 0 });
-            var panOffset = panOffsetState[0], setPanOffset = panOffsetState[1];
-            var panStartState = React.useState({ x: 0, y: 0 });
-            var panStart = panStartState[0], setPanStart = panStartState[1];
-            var isPanningState = React.useState(false);
-            var isPanning = isPanningState[0], setIsPanning = isPanningState[1];
-            var profilesState = React.useState(JSON.parse(localStorage.getItem("profiles") || "{}"));
-            var profiles = profilesState[0], setProfiles = profilesState[1];
-            var selectedProfileState = React.useState("");
-            var selectedProfile = selectedProfileState[0], setSelectedProfile = selectedProfileState[1];
-            var errorState = React.useState("");
-            var error = errorState[0], setError = errorState[1];
-            var canvasRef = React.useRef(null);
-            var workerRef = React.useRef(null);
+            const [version, setVersion] = React.useState("1.21");
+            const [biomes, setBiomes] = React.useState(["Plains"]);
+            const [structures, setStructures] = React.useState([]);
+            const [radius, setRadius] = React.useState(500);
+            const [priority, setPriority] = React.useState("none");
+            const [filters, setFilters] = React.useState({ 
+                temple_type: "Any", 
+                bastion_type: "Any", 
+                stronghold_distance: 0 
+            });
+            const [currentSeed, setCurrentSeed] = React.useState(null);
+            const [positions, setPositions] = React.useState({});
+            const [biomeDist, setBiomeDist] = React.useState({});
+            const [biomeDistNether, setBiomeDistNether] = React.useState({});
+            const [isRunning, setIsRunning] = React.useState(false);
+            const [progress, setProgress] = React.useState(0);
+            const [attempts, setAttempts] = React.useState(0);
+            const [startTime, setStartTime] = React.useState(0);
+            const [result, setResult] = React.useState("");
+            const [dimension, setDimension] = React.useState("overworld");
+            const [zoom, setZoom] = React.useState(1.0);
+            const [panOffset, setPanOffset] = React.useState({ x: 0, y: 0 });
+            const [isPanning, setIsPanning] = React.useState(false);
+            const [panStart, setPanStart] = React.useState({ x: 0, y: 0 });
+            const [profiles, setProfiles] = React.useState({});
+            const [selectedProfile, setSelectedProfile] = React.useState("");
+            const [error, setError] = React.useState("");
+            const [showMobileWarning, setShowMobileWarning] = React.useState(false);
+            
+            const canvasRef = React.useRef(null);
+            const workerRef = React.useRef(null);
+            const containerRef = React.useRef(null);
+
+            // Load profiles from localStorage with error handling
+            React.useEffect(() => {
+                try {
+                    const savedProfiles = localStorage.getItem("profiles");
+                    if (savedProfiles) {
+                        setProfiles(JSON.parse(savedProfiles));
+                    }
+                } catch (e) {
+                    console.error("Failed to load profiles:", e);
+                    setError("Failed to load saved profiles. Using default settings.");
+                }
+            }, []);
 
             // Biome and structure options
-            var biomeOptions = Object.keys(Constants.BIOME_WEIGHTS.OVERWORLD);
-            var structureOptions = Object.keys(Constants.STRUCTURES).filter(function(s) {
-                return ["End City", "Ruined Portal"].indexOf(s) === -1;
-            });
+            const biomeOptions = Object.keys(Constants.BIOME_WEIGHTS.OVERWORLD).sort();
+            const structureOptions = Object.keys(Constants.STRUCTURES)
+                .filter(s => !["End City", "Ruined Portal"].includes(s))
+                .sort();
 
-            // Initialize Web Worker
-            React.useEffect(function() {
-                try {
-                    workerRef.current = new Worker(URL.createObjectURL(new Blob([
-                        MinecraftRandom.toString() + "\n" +
-                        perlinNoise.toString() + "\n" +
-                        getBiomeAt.toString() + "\n" +
-                        getStructurePos.toString() + "\n" +
-                        analyzeBiomeDistribution.toString() + "\n" +
-                        "self.Constants = " + JSON.stringify(Constants) + ";\n" +
-                        "self.spacing = " + JSON.stringify(spacing) + ";\n" +
-                        "self.onmessage = function(e) {\n" +
-                        "    var data = e.data;\n" +
-                        "    var seed = data.seed, version = data.version, biomes = data.biomes, structures = data.structures, radius = data.radius, filters = data.filters, maxAttempts = data.maxAttempts;\n" +
-                        "    var attempts = 0;\n" +
-                        "    while (attempts < maxAttempts) {\n" +
-                        "        var currentSeed = BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER - Number.MAX_SAFE_INTEGER / 2));\n" +
-                        "        var biomeValid = true;\n" +
-                        "        for (var i = 0; i < biomes.length; i++) {\n" +
-                        "            var biome = biomes[i];\n" +
-                        "            var found = false;\n" +
-                        "            for (var j = 0; j < [-32, -16, 0, 16, 32].length; j++) {\n" +
-                        "                var x = [-32, -16, 0, 16, 32][j];\n" +
-                        "                for (var k = 0; k < [-32, -16, 0, 16, 32].length; k++) {\n" +
-                        "                    var z = [-32, -16, 0, 16, 32][k];\n" +
-                        "                    var biomeResult = getBiomeAt(currentSeed, x, z, version, 'overworld');\n" +
-                        "                    if (biomeResult[0] === biome) {\n" +
-                        "                        found = true;\n" +
-                        "                        break;\n" +
-                        "                    }\n" +
-                        "                }\n" +
-                        "                if (found) break;\n" +
-                        "            }\n" +
-                        "            if (!found) {\n" +
-                        "                biomeValid = false;\n" +
-                        "                break;\n" +
-                        "            }\n" +
-                        "        }\n" +
-                        "        var status = biomeValid ? null : 'Rejected: Biomes not matched';\n" +
-                        "        var structurePositions = {};\n" +
-                        "        var totalDistance = 0;\n" +
-                        "        if (biomeValid) {\n" +
-                        "            var valid = true;\n" +
-                        "            for (var i = 0; i < structures.length; i++) {\n" +
-                        "                var struct = structures[i];\n" +
-                        "                var pos = getStructurePos(currentSeed, struct, version, radius, filters);\n" +
-                        "                if (pos) {\n" +
-                        "                    structurePositions[struct] = pos;\n" +
-                        "                    totalDistance += pos[3];\n" +
-                        "                } else {\n" +
-                        "                    valid = false;\n" +
-                        "                    status = 'Rejected: ' + struct + ' not found';\n" +
-                        "                    break;\n" +
-                        "                }\n" +
-                        "            }\n" +
-                        "            if (valid && priority === 'distance' && totalDistance > radius * structures.length * 0.3) {\n" +
-                        "                valid = false;\n" +
-                        "                status = 'Rejected: Structures too far';\n" +
-                        "            }\n" +
-                        "            if (valid) {\n" +
-                        "                var biomeDist = analyzeBiomeDistribution(currentSeed, version, 4000, 'overworld');\n" +
-                        "                var biomeDistNether = analyzeBiomeDistribution(currentSeed, version, 4000, 'nether');\n" +
-                        "                self.postMessage({\n" +
-                        "                    seed: Number(currentSeed),\n" +
-                        "                    status: 'Accepted',\n" +
-                        "                    structurePositions: structurePositions,\n" +
-                        "                    biomeDist: biomeDist,\n" +
-                        "                    biomeDistNether: biomeDistNether,\n" +
-                        "                    attempts: attempts\n" +
-                        "                });\n" +
-                        "                return;\n" +
-                        "            }\n" +
-                        "        }\n" +
-                        "        attempts++;\n" +
-                        "        if (attempts % 100 === 0) {\n" +
-                        "            self.postMessage({ progress: Math.min(attempts / maxAttempts * 100, 99.9), attempts: attempts });\n" +
-                        "        }\n" +
-                        "    }\n" +
-                        "    self.postMessage({ status: 'No valid seed found', attempts: attempts });\n" +
-                        "};\n"
-                    ], { type: "text/javascript" })));
-                    workerRef.current.onmessage = function(e) {
-                        var data = e.data;
-                        var seed = data.seed, status = data.status, structurePositions = data.structurePositions, biomeDist = data.biomeDist, biomeDistNether = data.biomeDistNether, progress = data.progress, attempts = data.attempts;
-                        setProgress(progress || 0);
-                        setAttempts(attempts || 0);
-                        if (status === "Accepted") {
-                            setCurrentSeed(seed);
-                            setPositions(structurePositions);
-                            setBiomeDist(biomeDist);
-                            setBiomeDistNether(biomeDistNether);
-                            var structureLines = [];
-                            for (var key in structurePositions) {
-                                var pos = structurePositions[key];
-                                var x = pos[0], z = pos[1], desc = pos[2], dist = pos[3];
-                                structureLines.push("  " + desc + " at (" + x + ", " + z + ") (Distance: " + dist.toFixed(1) + ")");
+            // Initialize Web Worker with enhanced error handling
+            React.useEffect(() => {
+                // Create worker code as a string
+                const workerCode = `
+                    ${MinecraftRandom.toString()}
+                    ${perlinNoise.toString()}
+                    ${getBiomeAt.toString()}
+                    ${getStructurePos.toString()}
+                    ${analyzeBiomeDistribution.toString()}
+                    self.Constants = ${JSON.stringify(Constants)};
+                    self.spacing = ${JSON.stringify(spacing)};
+                    
+                    self.onmessage = function(e) {
+                        const data = e.data;
+                        const { version, biomes, structures, radius, filters, maxAttempts, priority } = data;
+                        let attempts = 0;
+                        
+                        // Enhanced seed generation with better randomness
+                        while (attempts < maxAttempts) {
+                            let seed;
+                            try {
+                                // Try crypto first for better randomness
+                                if (self.crypto && self.crypto.getRandomValues) {
+                                    const array = new BigUint64Array(1);
+                                    self.crypto.getRandomValues(array);
+                                    seed = array[0];
+                                } else {
+                                    // Fallback to Math.random with better distribution
+                                    const randomValue = Math.abs(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER * 2) - Number.MAX_SAFE_INTEGER);
+                                    seed = BigInt(randomValue);
+                                }
+                            } catch (e) {
+                                // Fallback to simple random with seed variation
+                                seed = BigInt(Math.floor(Math.random() * 9007199254740991) + Date.now());
                             }
-                            structureLines.sort(function(a, b) {
-                                var distA = parseFloat(a.match(/Distance: ([\d.]+)/)[1]);
-                                var distB = parseFloat(b.match(/Distance: ([\d.]+)/)[1]);
+                            
+                            // Validate seed
+                            if (seed === undefined || seed === null) {
+                                attempts++;
+                                continue;
+                            }
+                            
+                            // Check biomes at spawn points
+                            let biomeValid = true;
+                            const spawnRadius = ${Constants.WORLD_SETTINGS.SPAWN_CHECK_RADIUS};
+                            const spawnPoints = [];
+                            
+                            // Generate spawn points in a grid pattern
+                            for (let x = -spawnRadius; x <= spawnRadius; x += 16) {
+                                for (let z = -spawnRadius; z <= spawnRadius; z += 16) {
+                                    spawnPoints.push([x, z]);
+                                }
+                            }
+                            
+                            for (let i = 0; i < biomes.length; i++) {
+                                const biome = biomes[i];
+                                let found = false;
+                                
+                                for (const [x, z] of spawnPoints) {
+                                    try {
+                                        const biomeResult = getBiomeAt(seed, x, z, version, 'overworld');
+                                        if (biomeResult && biomeResult[0] === biome) {
+                                            found = true;
+                                            break;
+                                        }
+                                    } catch (e) {
+                                        console.error("Biome check error:", e);
+                                    }
+                                }
+                                
+                                if (!found) {
+                                    biomeValid = false;
+                                    break;
+                                }
+                            }
+                            
+                            if (!biomeValid) {
+                                attempts++;
+                                continue;
+                            }
+                            
+                            // Check structures with enhanced validation
+                            let structurePositions = {};
+                            let valid = true;
+                            let totalDistance = 0;
+                            
+                            for (let i = 0; i < structures.length; i++) {
+                                const struct = structures[i];
+                                try {
+                                    const pos = getStructurePos(seed, struct, version, radius, filters);
+                                    if (pos) {
+                                        structurePositions[struct] = pos;
+                                        totalDistance += pos[3];
+                                    } else {
+                                        valid = false;
+                                        break;
+                                    }
+                                } catch (e) {
+                                    console.error("Structure check error:", e);
+                                    valid = false;
+                                    break;
+                                }
+                            }
+                            
+                            // Check distance priority
+                            if (valid && priority === 'distance' && structures.length > 0) {
+                                const avgDistance = totalDistance / structures.length;
+                                const maxAllowedDistance = radius * 0.3;
+                                if (avgDistance > maxAllowedDistance) {
+                                    valid = false;
+                                }
+                            }
+                            
+                            if (valid) {
+                                try {
+                                    // Analyze biome distributions
+                                    const biomeDist = analyzeBiomeDistribution(seed, version, ${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}, 'overworld');
+                                    const biomeDistNether = analyzeBiomeDistribution(seed, version, ${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}, 'nether');
+                                    
+                                    self.postMessage({
+                                        seed: seed.toString(),
+                                        status: 'Accepted',
+                                        structurePositions: structurePositions,
+                                        biomeDist: biomeDist,
+                                        biomeDistNether: biomeDistNether,
+                                        attempts: attempts
+                                    });
+                                    return;
+                                } catch (e) {
+                                    console.error("Analysis error:", e);
+                                    valid = false;
+                                }
+                            }
+                            
+                            attempts++;
+                            
+                            // Send progress updates more frequently
+                            if (attempts % 25 === 0) {
+                                self.postMessage({ 
+                                    progress: Math.min((attempts / maxAttempts) * 100, 99.9), 
+                                    attempts: attempts 
+                                });
+                            }
+                            
+                            // Add small delay to prevent blocking UI
+                            if (attempts % 1000 === 0) {
+                                setTimeout(() => {}, 0);
+                            }
+                        }
+                        
+                        self.postMessage({ status: 'No valid seed found', attempts: attempts });
+                    };
+                `;
+                
+                try {
+                    // Create blob from worker code
+                    const blob = new Blob([workerCode], { type: 'application/javascript' });
+                    const workerUrl = URL.createObjectURL(blob);
+                    workerRef.current = new Worker(workerUrl);
+                    
+                    // Set up message handler with enhanced error handling
+                    workerRef.current.onmessage = function(e) {
+                        const data = e.data;
+                        
+                        if (data.progress !== undefined) {
+                            setProgress(data.progress);
+                            setAttempts(data.attempts || 0);
+                            return;
+                        }
+                        
+                        if (data.status === "Accepted") {
+                            setCurrentSeed(data.seed);
+                            setPositions(data.structurePositions);
+                            
+                            // Convert string seed back to number for display
+                            let seedNum = parseInt(data.seed);
+                            if (isNaN(seedNum) || seedNum > Number.MAX_SAFE_INTEGER) {
+                                seedNum = Number(data.seed.substring(0, 15)); // Truncate for display
+                            }
+                            
+                            setBiomeDist(data.biomeDist || {});
+                            setBiomeDistNether(data.biomeDistNether || {});
+                            
+                            // Format results with enhanced structure information
+                            const structureLines = [];
+                            for (const key in data.structurePositions) {
+                                const pos = data.structurePositions[key];
+                                if (pos) {
+                                    const x = pos[0], z = pos[1], desc = pos[2], dist = pos[3];
+                                    structureLines.push(\`  \${desc} at (\${x}, \${z}) (Distance: \${dist.toFixed(1)})\`);
+                                }
+                            }
+                            
+                            // Sort by distance
+                            structureLines.sort((a, b) => {
+                                const distA = parseFloat(a.match(/Distance: ([\\d.]+)/)[1]);
+                                const distB = parseFloat(b.match(/Distance: ([\\d.]+)/)[1]);
                                 return distA - distB;
                             });
-                            var biomeDistLines = [];
-                            for (var b in biomeDist) {
-                                biomeDistLines.push("  " + b + ": " + biomeDist[b].toFixed(2) + "%");
-                            }
-                            biomeDistLines.sort(function(a, b) {
-                                var percentA = parseFloat(a.match(/([\d.]+)%/)[1]);
-                                var percentB = parseFloat(b.match(/([\d.]+)%/)[1]);
-                                return percentB - percentA;
-                            });
-                            var biomeDistNetherLines = [];
-                            for (var b in biomeDistNether) {
-                                biomeDistNetherLines.push("  " + b + ": " + biomeDistNether[b].toFixed(2) + "%");
-                            }
-                            biomeDistNetherLines.sort(function(a, b) {
-                                var percentA = parseFloat(a.match(/([\d.]+)%/)[1]);
-                                var percentB = parseFloat(b.match(/([\d.]+)%/)[1]);
-                                return percentB - percentA;
-                            });
-                            setResult(
-                                "Seed: " + seed + "\n" +
-                                "Biomes: " + biomes.join(", ") + "\n" +
-                                "Version: " + version + "\n" +
-                                "Structures:\n" +
-                                structureLines.join("\n") + "\n" +
-                                "Biome Distribution (Overworld, 4000x4000 blocks):\n" +
-                                biomeDistLines.join("\n") + "\n" +
-                                "Biome Distribution (Nether, 4000x4000 blocks):\n" +
-                                biomeDistNetherLines.join("\n")
-                            );
-                            logSeed(seed, version, biomes, structures, radius, filters, "Accepted", structurePositions);
+                            
+                            // Format biome distributions
+                            const biomeDistLines = Object.entries(data.biomeDist || {})
+                                .sort(([,a], [,b]) => b - a)
+                                .map(([biome, percent]) => \`  \${biome}: \${percent.toFixed(2)}%\`);
+                            
+                            const biomeDistNetherLines = Object.entries(data.biomeDistNether || {})
+                                .sort(([,a], [,b]) => b - a)
+                                .map(([biome, percent]) => \`  \${biome}: \${percent.toFixed(2)}%\`);
+                            
+                            setResult(\`Seed: \${seedNum}
+Biomes: \${biomes.join(", ")}
+Version: \${version}
+Structures:
+\${structureLines.join("\\n")}
+Biome Distribution (Overworld, \${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}x\${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS} blocks):
+\${biomeDistLines.join("\\n")}
+Biome Distribution (Nether, \${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}x\${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS} blocks):
+\${biomeDistNetherLines.join("\\n")}\`);
+                            
                             setIsRunning(false);
-                        } else if (status === "No valid seed found") {
-                            setResult("No valid seed found. Try again!");
+                        } else if (data.status === "No valid seed found") {
+                            setResult("No valid seed found after extensive search. Try adjusting criteria.");
                             setIsRunning(false);
                         }
                     };
+                    
+                    workerRef.current.onerror = function(error) {
+                        console.error("Worker error:", error);
+                        setError(\`Worker initialization failed: \${error.message || "Unknown error"}\`);
+                        setIsRunning(false);
+                    };
                 } catch (e) {
                     console.error("Failed to initialize Web Worker:", e);
-                    setError("Failed to initialize seed generation!");
+                    setError(\`Failed to initialize seed generation: \${e.message || "Check browser compatibility"}\`);
                     setIsRunning(false);
                 }
-                return function() {
-                    if (workerRef.current) workerRef.current.terminate();
+                
+                // Cleanup function
+                return () => {
+                    if (workerRef.current) {
+                        workerRef.current.terminate();
+                    }
                 };
-            }, []);
+            }, [biomes, structures, version, radius, priority, filters]);
 
-            // Draw map on canvas
-            var canvasData = React.useMemo(function() {
-                if (Object.keys(positions).length === 0) return null;
-                var scale = 600 / (2 * radius) * zoom;
-                var biomeColors = {
+            // Draw map on canvas with enhanced rendering
+            React.useEffect(() => {
+                if (!canvasRef.current || !currentSeed || Object.keys(positions).length === 0) return;
+                
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext("2d");
+                const rect = canvas.getBoundingClientRect();
+                const width = rect.width;
+                const height = rect.height;
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+                
+                // Calculate scale and center
+                const scale = Math.min(width, height) / (2 * radius) * zoom;
+                const centerX = width / 2;
+                const centerY = height / 2;
+                
+                // Biome colors with enhanced palette
+                const biomeColors = {
                     "Plains": "#90EE90", "Forest": "#228B22", "Desert": "#EDC9AF", "Taiga": "#2F4F4F",
                     "Swamp": "#6B8E23", "Jungle": "#006400", "Savanna": "#DAA520", "Badlands": "#8B0000",
                     "Mushroom Fields": "#FFE4E1", "Deep Dark": "#1C2526", "Mangrove Swamp": "#3CB371",
                     "Cherry Grove": "#FF69B4", "Lush Caves": "#00CED1", "Snowy Plains": "#F0F8FF",
                     "Ocean": "#1E90FF", "Meadow": "#98FB98", "Bamboo Jungle": "#9ACD32",
                     "Nether Wastes": "#8B0000", "Crimson Forest": "#DC143C", "Warped Forest": "#20B2AA",
-                    "Soul Sand Valley": "#B0C4DE", "Basalt Deltas": "#696969"
+                    "Soul Sand Valley": "#B0C4DE", "Basalt Deltas": "#696969", "Giant Tree Taiga": "#3A5F0B",
+                    "Stone Shore": "#808080", "River": "#4682B4", "Beach": "#F5DEB3", "Dark Forest": "#191970"
                 };
-                var structureColors = {
-                    "Village": "yellow", "Mineshaft": "gray", "Stronghold": "purple", "Temple": "orange",
-                    "Monument": "blue", "Mansion": "brown", "Bastion Remnant": "black", "Ancient City": "cyan",
-                    "Nether Fortress": "red", "Trial Chambers": "magenta"
+                
+                // Structure colors with enhanced visibility
+                const structureColors = {
+                    "Village": "#FFD700", "Mineshaft": "#808080", "Stronghold": "#800080", "Temple": "#FFA500",
+                    "Monument": "#0000FF", "Mansion": "#8B4513", "Bastion Remnant": "#000000", "Ancient City": "#00FFFF",
+                    "Nether Fortress": "#FF0000", "Trial Chambers": "#FF00FF", "Ruined Portal": "#A52A2A"
                 };
-                return { scale: scale, biomeColors: biomeColors, structureColors: structureColors };
-            }, [positions, radius, zoom]);
-
-            React.useEffect(function() {
-                if (!canvasData) return;
-                var canvas = canvasRef.current;
-                var ctx = canvas.getContext("2d");
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                var scale = canvasData.scale;
-                var biomeColors = canvasData.biomeColors;
-                var structureColors = canvasData.structureColors;
-                var step = Math.floor(4000 / 80);
-                for (var x = -4000; x <= 4000; x += step) {
-                    for (var z = -4000; z <= 4000; z += step) {
-                        var biomeResult = getBiomeAt(currentSeed || 0, x, z, version, dimension);
-                        var biome = biomeResult[0];
-                        var cx = 300 + (x * scale + panOffset.x);
-                        var cy = 300 + (z * scale + panOffset.y);
-                        ctx.fillStyle = biomeColors[biome] || "#2b2b2b";
-                        ctx.globalAlpha = 0.5;
-                        ctx.fillRect(cx - step * scale, cy - step * scale, step * scale * 2, step * scale * 2);
-                        ctx.globalAlpha = 1.0;
+                
+                // Draw biome grid with optimized rendering
+                const analysisRadius = Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS;
+                const step = Math.floor(analysisRadius / 80);
+                
+                // Only draw visible portion
+                const visibleMinX = -width/(2*scale) - panOffset.x/scale;
+                const visibleMaxX = width/(2*scale) - panOffset.x/scale;
+                const visibleMinZ = -height/(2*scale) - panOffset.y/scale;
+                const visibleMaxZ = height/(2*scale) - panOffset.y/scale;
+                
+                for (let x = Math.max(-analysisRadius, visibleMinX - step); x <= Math.min(analysisRadius, visibleMaxX + step); x += step) {
+                    for (let z = Math.max(-analysisRadius, visibleMinZ - step); z <= Math.min(analysisRadius, visibleMaxZ + step); z += step) {
+                        try {
+                            const biomeResult = getBiomeAt(BigInt(currentSeed), x, z, version, dimension);
+                            const biome = biomeResult[0];
+                            const color = biomeColors[biome] || "#2b2b2b";
+                            
+                            const screenX = centerX + (x * scale) + panOffset.x;
+                            const screenY = centerY + (z * scale) + panOffset.y;
+                            
+                            // Only draw if visible
+                            if (screenX > -step * scale && screenX < width + step * scale &&
+                                screenY > -step * scale && screenY < height + step * scale) {
+                                ctx.fillStyle = color;
+                                ctx.globalAlpha = 0.5;
+                                ctx.fillRect(screenX - step * scale / 2, screenY - step * scale / 2, 
+                                           step * scale, step * scale);
+                                ctx.globalAlpha = 1.0;
+                            }
+                        } catch (e) {
+                            console.error("Biome rendering error:", e);
+                        }
                     }
                 }
+                
+                // Draw spawn point
                 if (dimension === "overworld") {
                     ctx.fillStyle = "red";
                     ctx.beginPath();
-                    ctx.arc(300, 300, 6, 0, 2 * Math.PI);
+                    ctx.arc(centerX, centerY, 6, 0, 2 * Math.PI);
                     ctx.fill();
                     ctx.strokeStyle = "black";
+                    ctx.lineWidth = 2;
                     ctx.stroke();
+                    ctx.lineWidth = 1;
                 }
-                for (var struct in positions) {
-                    var pos = positions[struct];
-                    var x = pos[0], z = pos[1], desc = pos[2];
-                    if (dimension === "nether" && ["Bastion Remnant", "Nether Fortress"].indexOf(struct) === -1) continue;
-                    if (dimension === "overworld" && ["Bastion Remnant", "Nether Fortress"].indexOf(struct) !== -1) continue;
-                    var cx = 300 + (x * scale + panOffset.x);
-                    var cy = 300 + (z * scale + panOffset.y);
-                    ctx.fillStyle = structureColors[struct] || "white";
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, 6, 0, 2 * Math.PI);
-                    ctx.fill();
-                    ctx.strokeStyle = "black";
-                    ctx.stroke();
-                    ctx.fillStyle = "#e0e0e0";
-                    ctx.font = "12px Arial";
-                    ctx.fillText(desc, cx + 10, cy + 4);
+                
+                // Draw structures with enhanced visibility
+                for (const struct in positions) {
+                    const pos = positions[struct];
+                    if (!pos) continue;
+                    
+                    const x = pos[0], z = pos[1], desc = pos[2];
+                    
+                    // Skip structures not in current dimension
+                    if (dimension === "nether" && !["Bastion Remnant", "Nether Fortress"].includes(struct)) continue;
+                    if (dimension === "overworld" && ["Bastion Remnant", "Nether Fortress"].includes(struct)) continue;
+                    
+                    const screenX = centerX + (x * scale) + panOffset.x;
+                    const screenY = centerY + (z * scale) + panOffset.y;
+                    
+                    // Only draw if visible
+                    if (screenX > -20 && screenX < width + 20 && screenY > -20 && screenY < height + 20) {
+                        const color = structureColors[struct] || "white";
+                        ctx.fillStyle = color;
+                        ctx.beginPath();
+                        ctx.arc(screenX, screenY, 6, 0, 2 * Math.PI);
+                        ctx.fill();
+                        ctx.strokeStyle = "black";
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                        ctx.lineWidth = 1;
+                        
+                        // Label with enhanced readability
+                        ctx.fillStyle = "#e0e0e0";
+                        ctx.font = "12px Arial";
+                        ctx.textAlign = "left";
+                        ctx.fillText(desc, screenX + 10, screenY + 4);
+                        ctx.textAlign = "start";
+                    }
                 }
-            }, [canvasData, dimension, panOffset, currentSeed, version]);
+            }, [currentSeed, positions, version, dimension, zoom, panOffset, radius]);
 
-            // Find valid seed using Web Worker
-            function findValidSeed() {
+            // Find valid seed with enhanced validation
+            const findValidSeed = React.useCallback(() => {
+                // Mobile warning
+                if (window.innerWidth < 768) {
+                    setShowMobileWarning(true);
+                    setTimeout(() => setShowMobileWarning(false), 3000);
+                }
+                
+                if (isRunning) return;
+                
+                // Validate inputs with enhanced error checking
+                if (!biomes || biomes.length === 0) {
+                    setError("Please select at least one biome.");
+                    return;
+                }
+                
+                if (!structures || structures.length === 0) {
+                    setError("Please select at least one structure.");
+                    return;
+                }
+                
+                if (radius < 100 || radius > 4000) {
+                    setError("Radius must be between 100 and 4000 blocks.");
+                    return;
+                }
+                
                 setIsRunning(true);
                 setProgress(0);
                 setAttempts(0);
                 setStartTime(Date.now());
                 setResult("Generating seed, please wait...");
                 setError("");
+                
                 if (workerRef.current) {
                     workerRef.current.postMessage({
-                        seed: 0,
-                        version: version,
-                        biomes: biomes,
-                        structures: structures,
-                        radius: radius,
-                        filters: filters,
+                        version,
+                        biomes,
+                        structures,
+                        radius,
+                        filters,
+                        priority,
                         maxAttempts: Constants.WORLD_SETTINGS.SEARCH_ITERATIONS
                     });
                 } else {
-                    setError("Web Worker not initialized!");
+                    setError("Web Worker not initialized. Please refresh the page.");
                     setIsRunning(false);
                 }
-            }
+            }, [isRunning, biomes, structures, version, radius, filters, priority]);
 
-            // Stop seed search
-            function stopSearch() {
+            // Stop search with proper cleanup
+            const stopSearch = React.useCallback(() => {
                 if (workerRef.current) {
                     workerRef.current.terminate();
-                    workerRef.current = new Worker(URL.createObjectURL(new Blob([
-                        MinecraftRandom.toString() + "\n" +
-                        perlinNoise.toString() + "\n" +
-                        getBiomeAt.toString() + "\n" +
-                        getStructurePos.toString() + "\n" +
-                        analyzeBiomeDistribution.toString() + "\n" +
-                        "self.Constants = " + JSON.stringify(Constants) + ";\n" +
-                        "self.spacing = " + JSON.stringify(spacing) + ";\n" +
-                        "self.onmessage = function(e) {\n" +
-                        "    var data = e.data;\n" +
-                        "    var seed = data.seed, version = data.version, biomes = data.biomes, structures = data.structures, radius = data.radius, filters = data.filters, maxAttempts = data.maxAttempts;\n" +
-                        "    var attempts = 0;\n" +
-                        "    while (attempts < maxAttempts) {\n" +
-                        "        var currentSeed = BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER - Number.MAX_SAFE_INTEGER / 2));\n" +
-                        "        var biomeValid = true;\n" +
-                        "        for (var i = 0; i < biomes.length; i++) {\n" +
-                        "            var biome = biomes[i];\n" +
-                        "            var found = false;\n" +
-                        "            for (var j = 0; j < [-32, -16, 0, 16, 32].length; j++) {\n" +
-                        "                var x = [-32, -16, 0, 16, 32][j];\n" +
-                        "                for (var k = 0; k < [-32, -16, 0, 16, 32].length; k++) {\n" +
-                        "                    var z = [-32, -16, 0, 16, 32][k];\n" +
-                        "                    var biomeResult = getBiomeAt(currentSeed, x, z, version, 'overworld');\n" +
-                        "                    if (biomeResult[0] === biome) {\n" +
-                        "                        found = true;\n" +
-                        "                        break;\n" +
-                        "                    }\n" +
-                        "                }\n" +
-                        "                if (found) break;\n" +
-                        "            }\n" +
-                        "            if (!found) {\n" +
-                        "                biomeValid = false;\n" +
-                        "                break;\n" +
-                        "            }\n" +
-                        "        }\n" +
-                        "        var status = biomeValid ? null : 'Rejected: Biomes not matched';\n" +
-                        "        var structurePositions = {};\n" +
-                        "        var totalDistance = 0;\n" +
-                        "        if (biomeValid) {\n" +
-                        "            var valid = true;\n" +
-                        "            for (var i = 0; i < structures.length; i++) {\n" +
-                        "                var struct = structures[i];\n" +
-                        "                var pos = getStructurePos(currentSeed, struct, version, radius, filters);\n" +
-                        "                if (pos) {\n" +
-                        "                    structurePositions[struct] = pos;\n" +
-                        "                    totalDistance += pos[3];\n" +
-                        "                } else {\n" +
-                        "                    valid = false;\n" +
-                        "                    status = 'Rejected: ' + struct + ' not found';\n" +
-                        "                    break;\n" +
-                        "                }\n" +
-                        "            }\n" +
-                        "            if (valid && priority === 'distance' && totalDistance > radius * structures.length * 0.3) {\n" +
-                        "                valid = false;\n" +
-                        "                status = 'Rejected: Structures too far';\n" +
-                        "            }\n" +
-                        "            if (valid) {\n" +
-                        "                var biomeDist = analyzeBiomeDistribution(currentSeed, version, 4000, 'overworld');\n" +
-                        "                var biomeDistNether = analyzeBiomeDistribution(currentSeed, version, 4000, 'nether');\n" +
-                        "                self.postMessage({\n" +
-                        "                    seed: Number(currentSeed),\n" +
-                        "                    status: 'Accepted',\n" +
-                        "                    structurePositions: structurePositions,\n" +
-                        "                    biomeDist: biomeDist,\n" +
-                        "                    biomeDistNether: biomeDistNether,\n" +
-                        "                    attempts: attempts\n" +
-                        "                });\n" +
-                        "                return;\n" +
-                        "            }\n" +
-                        "        }\n" +
-                        "        attempts++;\n" +
-                        "        if (attempts % 100 === 0) {\n" +
-                        "            self.postMessage({ progress: Math.min(attempts / maxAttempts * 100, 99.9), attempts: attempts });\n" +
-                        "        }\n" +
-                        "    }\n" +
-                        "    self.postMessage({ status: 'No valid seed found', attempts: attempts });\n" +
-                        "};\n"
-                    ], { type: "text/javascript" })));
-                    setIsRunning(false);
-                    setResult("Search stopped.");
+                    // Recreate worker with fresh instance
+                    const workerCode = `
+                        ${MinecraftRandom.toString()}
+                        ${perlinNoise.toString()}
+                        ${getBiomeAt.toString()}
+                        ${getStructurePos.toString()}
+                        ${analyzeBiomeDistribution.toString()}
+                        self.Constants = ${JSON.stringify(Constants)};
+                        self.spacing = ${JSON.stringify(spacing)};
+                        
+                        self.onmessage = function(e) {
+                            const data = e.data;
+                            const { version, biomes, structures, radius, filters, maxAttempts, priority } = data;
+                            let attempts = 0;
+                            
+                            while (attempts < maxAttempts) {
+                                let seed;
+                                try {
+                                    if (self.crypto && self.crypto.getRandomValues) {
+                                        const array = new BigUint64Array(1);
+                                        self.crypto.getRandomValues(array);
+                                        seed = array[0];
+                                    } else {
+                                        const randomValue = Math.abs(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER * 2) - Number.MAX_SAFE_INTEGER);
+                                        seed = BigInt(randomValue);
+                                    }
+                                } catch (e) {
+                                    seed = BigInt(Math.floor(Math.random() * 9007199254740991) + Date.now());
+                                }
+                                
+                                let biomeValid = true;
+                                const spawnRadius = ${Constants.WORLD_SETTINGS.SPAWN_CHECK_RADIUS};
+                                const spawnPoints = [];
+                                
+                                for (let x = -spawnRadius; x <= spawnRadius; x += 16) {
+                                    for (let z = -spawnRadius; z <= spawnRadius; z += 16) {
+                                        spawnPoints.push([x, z]);
+                                    }
+                                }
+                                
+                                for (let i = 0; i < biomes.length; i++) {
+                                    const biome = biomes[i];
+                                    let found = false;
+                                    
+                                    for (const [x, z] of spawnPoints) {
+                                        const biomeResult = getBiomeAt(seed, x, z, version, 'overworld');
+                                        if (biomeResult && biomeResult[0] === biome) {
+                                            found = true;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    if (!found) {
+                                        biomeValid = false;
+                                        break;
+                                    }
+                                }
+                                
+                                if (!biomeValid) {
+                                    attempts++;
+                                    continue;
+                                }
+                                
+                                let structurePositions = {};
+                                let valid = true;
+                                let totalDistance = 0;
+                                
+                                for (let i = 0; i < structures.length; i++) {
+                                    const struct = structures[i];
+                                    const pos = getStructurePos(seed, struct, version, radius, filters);
+                                    if (pos) {
+                                        structurePositions[struct] = pos;
+                                        totalDistance += pos[3];
+                                    } else {
+                                        valid = false;
+                                        break;
+                                    }
+                                }
+                                
+                                if (valid && priority === 'distance' && structures.length > 0) {
+                                    const avgDistance = totalDistance / structures.length;
+                                    const maxAllowedDistance = radius * 0.3;
+                                    if (avgDistance > maxAllowedDistance) {
+                                        valid = false;
+                                    }
+                                }
+                                
+                                if (valid) {
+                                    const biomeDist = analyzeBiomeDistribution(seed, version, ${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}, 'overworld');
+                                    const biomeDistNether = analyzeBiomeDistribution(seed, version, ${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}, 'nether');
+                                    
+                                    self.postMessage({
+                                        seed: seed.toString(),
+                                        status: 'Accepted',
+                                        structurePositions: structurePositions,
+                                        biomeDist: biomeDist,
+                                        biomeDistNether: biomeDistNether,
+                                        attempts: attempts
+                                    });
+                                    return;
+                                }
+                                
+                                attempts++;
+                                
+                                if (attempts % 25 === 0) {
+                                    self.postMessage({ 
+                                        progress: Math.min((attempts / maxAttempts) * 100, 99.9), 
+                                        attempts: attempts 
+                                    });
+                                }
+                            }
+                            
+                            self.postMessage({ status: 'No valid seed found', attempts: attempts });
+                        };
+                    `;
+                    
+                    const blob = new Blob([workerCode], { type: 'application/javascript' });
+                    const workerUrl = URL.createObjectURL(blob);
+                    workerRef.current = new Worker(workerUrl);
+                    
+                    workerRef.current.onmessage = function(e) {
+                        const data = e.data;
+                        
+                        if (data.progress !== undefined) {
+                            setProgress(data.progress);
+                            setAttempts(data.attempts || 0);
+                            return;
+                        }
+                        
+                        if (data.status === "Accepted") {
+                            setCurrentSeed(data.seed);
+                            setPositions(data.structurePositions);
+                            
+                            let seedNum = parseInt(data.seed);
+                            if (isNaN(seedNum) || seedNum > Number.MAX_SAFE_INTEGER) {
+                                seedNum = Number(data.seed.substring(0, 15));
+                            }
+                            
+                            setBiomeDist(data.biomeDist || {});
+                            setBiomeDistNether(data.biomeDistNether || {});
+                            
+                            const structureLines = [];
+                            for (const key in data.structurePositions) {
+                                const pos = data.structurePositions[key];
+                                if (pos) {
+                                    const x = pos[0], z = pos[1], desc = pos[2], dist = pos[3];
+                                    structureLines.push(\`  \${desc} at (\${x}, \${z}) (Distance: \${dist.toFixed(1)})\`);
+                                }
+                            }
+                            
+                            structureLines.sort((a, b) => {
+                                const distA = parseFloat(a.match(/Distance: ([\\d.]+)/)[1]);
+                                const distB = parseFloat(b.match(/Distance: ([\\d.]+)/)[1]);
+                                return distA - distB;
+                            });
+                            
+                            const biomeDistLines = Object.entries(data.biomeDist || {})
+                                .sort(([,a], [,b]) => b - a)
+                                .map(([biome, percent]) => \`  \${biome}: \${percent.toFixed(2)}%\`);
+                            
+                            const biomeDistNetherLines = Object.entries(data.biomeDistNether || {})
+                                .sort(([,a], [,b]) => b - a)
+                                .map(([biome, percent]) => \`  \${biome}: \${percent.toFixed(2)}%\`);
+                            
+                            setResult(\`Seed: \${seedNum}
+Biomes: \${biomes.join(", ")}
+Version: \${version}
+Structures:
+\${structureLines.join("\\n")}
+Biome Distribution (Overworld, \${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}x\${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS} blocks):
+\${biomeDistLines.join("\\n")}
+Biome Distribution (Nether, \${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}x\${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS} blocks):
+\${biomeDistNetherLines.join("\\n")}\`);
+                            
+                            setIsRunning(false);
+                        } else if (data.status === "No valid seed found") {
+                            setResult("No valid seed found after extensive search. Try adjusting criteria.");
+                            setIsRunning(false);
+                        }
+                    };
                 }
-            }
+                
+                setIsRunning(false);
+                setResult("Search stopped by user.");
+            }, [biomes, structures, version, radius, filters, priority]);
 
-            // Handle biome addition
-            function addBiome(biome) {
-                if (biomes.length < 3) {
-                    setBiomes(biomes.concat([biome]));
+            // Handle biome addition with enhanced validation
+            const addBiome = (biome) => {
+                if (biomes.length < 3 && !biomes.includes(biome)) {
+                    setBiomes([...biomes, biome]);
                     setError("");
-                } else {
+                } else if (biomes.length >= 3) {
                     setError("Maximum 3 biomes allowed!");
                 }
-            }
+            };
 
-            // Handle structure toggle
-            function toggleStructure(struct) {
-                if (structures.indexOf(struct) !== -1) {
-                    setStructures(structures.filter(function(s) { return s !== struct; }));
+            // Handle structure toggle with enhanced validation
+            const toggleStructure = (struct) => {
+                if (structures.includes(struct)) {
+                    setStructures(structures.filter(s => s !== struct));
                     setError("");
                 } else if (structures.length < 3) {
-                    setStructures(structures.concat([struct]));
+                    setStructures([...structures, struct]);
                     setError("");
                 } else {
                     setError("Maximum 3 structures allowed!");
                 }
-            }
+            };
 
-            // Save profile
-            function saveProfile() {
-                var name = prompt("Enter profile name:");
-                if (name) {
+            // Save profile with enhanced error handling
+            const saveProfile = () => {
+                const name = prompt("Enter profile name:");
+                if (name && name.trim() !== "") {
                     try {
-                        var profile = { version: version, biomes: biomes, structures: structures, radius: radius, priority: priority, filters: filters };
-                        var newProfiles = Object.assign({}, profiles, {});
-                        newProfiles[name] = profile;
+                        const profile = { version, biomes, structures, radius, priority, filters };
+                        const newProfiles = { ...profiles, [name.trim()]: profile };
                         setProfiles(newProfiles);
                         localStorage.setItem("profiles", JSON.stringify(newProfiles));
+                        setSelectedProfile(name.trim());
+                        setError("");
+                    } catch (e) {
+                        setError("Failed to save profile! Check browser storage permissions.");
+                    }
+                } else if (name !== null) {
+                    setError("Profile name cannot be empty!");
+                }
+            };
+
+            // Load profile with enhanced validation
+            const loadProfile = (name) => {
+                if (name && profiles[name]) {
+                    const profile = profiles[name];
+                    // Validate profile data
+                    if (profile && Array.isArray(profile.biomes) && Array.isArray(profile.structures)) {
+                        setVersion(profile.version || "1.21");
+                        setBiomes(profile.biomes);
+                        setStructures(profile.structures);
+                        setRadius(profile.radius || 500);
+                        setPriority(profile.priority || "none");
+                        setFilters(profile.filters || { temple_type: "Any", bastion_type: "Any", stronghold_distance: 0 });
                         setSelectedProfile(name);
                         setError("");
-                    } catch (e) {
-                        setError("Failed to save profile!");
+                    } else {
+                        setError("Invalid profile data!");
                     }
                 }
-            }
+            };
 
-            // Load profile
-            function loadProfile(name) {
-                if (profiles[name]) {
-                    var profile = profiles[name];
-                    var version = profile.version, biomes = profile.biomes, structures = profile.structures, radius = profile.radius, priority = profile.priority, filters = profile.filters;
-                    setVersion(version);
-                    setBiomes(biomes);
-                    setStructures(structures);
-                    setRadius(radius);
-                    setPriority(priority);
-                    setFilters(filters);
-                    setSelectedProfile(name);
-                    setError("");
-                }
-            }
-
-            // Delete profile
-            function deleteProfile() {
+            // Delete profile with confirmation
+            const deleteProfile = () => {
                 if (selectedProfile) {
-                    try {
-                        var newProfiles = Object.assign({}, profiles);
-                        delete newProfiles[selectedProfile];
-                        setProfiles(newProfiles);
-                        localStorage.setItem("profiles", JSON.stringify(newProfiles));
-                        setSelectedProfile("");
-                        setError("");
-                    } catch (e) {
-                        setError("Failed to delete profile!");
+                    if (window.confirm(`Are you sure you want to delete profile "${selectedProfile}"?`)) {
+                        try {
+                            const newProfiles = { ...profiles };
+                            delete newProfiles[selectedProfile];
+                            setProfiles(newProfiles);
+                            localStorage.setItem("profiles", JSON.stringify(newProfiles));
+                            setSelectedProfile("");
+                            setError("");
+                        } catch (e) {
+                            setError("Failed to delete profile!");
+                        }
                     }
                 }
-            }
+            };
 
-            // Export results
-            function exportResults() {
+            // Export results with enhanced formatting
+            const exportResults = () => {
                 if (!currentSeed) {
                     setError("No seed to export!");
                     return;
                 }
                 try {
-                    var result = {
+                    const resultData = {
                         seed: currentSeed,
-                        biomes: biomes,
+                        biomes,
                         structures: positions,
-                        radius: radius,
-                        version: version,
+                        radius,
+                        version,
                         biome_distribution_overworld: biomeDist,
                         biome_distribution_nether: biomeDistNether,
                         timestamp: new Date().toISOString(),
-                        criteria: Object.assign({ priority: priority }, filters)
+                        criteria: { priority, ...filters },
+                        application: "Minecraft Seed Generator Ultimate",
+                        version: "2.0"
                     };
-                    var blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
-                    var url = URL.createObjectURL(blob);
-                    var a = document.createElement("a");
+                    const blob = new Blob([JSON.stringify(resultData, null, 2)], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
                     a.href = url;
-                    a.download = "seed_result.json";
+                    a.download = `minecraft_seed_${Date.now()}.json`;
                     a.click();
                     URL.revokeObjectURL(url);
                     setError("");
                 } catch (e) {
-                    setError("Failed to export results!");
+                    setError("Failed to export results! " + (e.message || "Unknown error"));
                 }
-            }
+            };
 
-            // Copy seed
-            function copySeed() {
+            // Copy seed with enhanced feedback
+            const copySeed = () => {
                 if (currentSeed) {
                     try {
-                        navigator.clipboard.writeText(String(currentSeed));
-                        setError("");
-                        alert("Seed copied to clipboard!");
+                        const seedNum = parseInt(currentSeed);
+                        if (!isNaN(seedNum)) {
+                            navigator.clipboard.writeText(seedNum.toString()).then(() => {
+                                alert("Seed copied to clipboard successfully!");
+                            }).catch(err => {
+                                setError("Failed to copy seed: " + (err.message || "Permission denied"));
+                            });
+                        } else {
+                            setError("Invalid seed format!");
+                        }
                     } catch (e) {
                         setError("Failed to copy seed!");
                     }
                 } else {
                     setError("No seed to copy!");
                 }
-            }
+            };
 
-            // Handle canvas panning
-            function startPan(e) {
+            // Handle canvas interactions with touch support
+            const handlePanStart = (e) => {
                 setIsPanning(true);
-                setPanStart({ x: e.clientX, y: e.clientY });
-            }
-            function pan(e) {
-                if (!isPanning) return;
-                setPanOffset({
-                    x: panOffset.x + (e.clientX - panStart.x),
-                    y: panOffset.y + (e.clientY - panStart.y)
-                });
-                setPanStart({ x: e.clientX, y: e.clientY });
-            }
-            function stopPan() {
-                setIsPanning(false);
-            }
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                setPanStart({ x: clientX, y: clientY });
+            };
 
-            // Reset settings
-            function resetSettings() {
-                setVersion("1.21");
-                setBiomes(["Plains"]);
-                setStructures([]);
-                setRadius(500);
-                setPriority("none");
-                setFilters({ temple_type: "Any", bastion_type: "Any", stronghold_distance: 0 });
-                setSelectedProfile("");
-                setError("");
-                setCurrentSeed(null);
-                setPositions({});
-                setBiomeDist({});
-                setBiomeDistNether({});
-                setResult("");
-                setZoom(1.0);
-                setPanOffset({ x: 0, y: 0 });
-            }
+            const handlePanMove = (e) => {
+                if (!isPanning) return;
+                e.preventDefault();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                setPanOffset({
+                    x: panOffset.x + (clientX - panStart.x),
+                    y: panOffset.y + (clientY - panStart.y)
+                });
+                setPanStart({ x: clientX, y: clientY });
+            };
+
+            const handlePanEnd = () => {
+                setIsPanning(false);
+            };
+
+            // Reset settings with confirmation
+            const resetSettings = () => {
+                if (window.confirm("Are you sure you want to reset all settings to default?")) {
+                    setVersion("1.21");
+                    setBiomes(["Plains"]);
+                    setStructures([]);
+                    setRadius(500);
+                    setPriority("none");
+                    setFilters({ temple_type: "Any", bastion_type: "Any", stronghold_distance: 0 });
+                    setSelectedProfile("");
+                    setError("");
+                    setCurrentSeed(null);
+                    setPositions({});
+                    setBiomeDist({});
+                    setBiomeDistNether({});
+                    setResult("");
+                    setZoom(1.0);
+                    setPanOffset({ x: 0, y: 0 });
+                }
+            };
+
+            // Format time elapsed with enhanced precision
+            const formatTime = () => {
+                if (!startTime) return "0.0";
+                return ((Date.now() - startTime) / 1000).toFixed(1);
+            };
 
             return (
-                React.createElement("div", { className: "flex h-screen bg-gray-900 text-gray-100" },
-                    // Left Control Panel
-                    React.createElement("div", { className: "w-96 bg-gray-800 p-6 overflow-y-auto scrollbar-custom" },
-                        React.createElement("h1", { className: "text-2xl font-bold text-green-400 mb-6" }, "Minecraft Seed Generator"),
-                        error && React.createElement("p", { className: "text-red-500 text-sm mb-4" }, error),
-                        // Version Selection
-                        React.createElement("label", { className: "block text-sm mb-2" }, "Minecraft Version:"),
-                        React.createElement("select", {
-                            value: version,
-                            onChange: function(e) { setVersion(e.target.value); },
-                            className: "w-full bg-gray-700 text-white p-2 rounded mb-4"
-                        }, ["1.14", "1.15", "1.16", "1.17", "1.18", "1.19", "1.20", "1.21"].map(function(v) {
-                            return React.createElement("option", { key: v, value: v }, v);
-                        })),
-                        // Biome Selection
-                        React.createElement("label", { className: "block text-sm mb-2" }, "Spawn Biomes (up to 3):"),
-                        React.createElement("div", { className: "mb-4" },
-                            biomes.map(function(b, i) {
-                                return React.createElement("select", {
-                                    key: i,
-                                    value: b,
-                                    onChange: function(e) {
-                                        setBiomes(biomes.map(function(b2, j) { return i === j ? e.target.value : b2; }));
-                                    },
-                                    className: "w-full bg-gray-700 text-white p-2 rounded mb-2"
-                                }, biomeOptions.map(function(o) {
-                                    return React.createElement("option", { key: o, value: o }, o);
-                                }));
-                            }),
-                            React.createElement("button", {
-                                onClick: function() { addBiome(biomeOptions[0]); },
-                                className: "bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
-                            }, "Add Biome")
-                        ),
-                        // Structure Selection
-                        React.createElement("label", { className: "block text-sm mb-2" }, "Structures (up to 3):"),
-                        React.createElement("div", { className: "grid grid-cols-2 gap-2 mb-4" },
-                            structureOptions.map(function(s) {
-                                return React.createElement("label", { key: s, className: "flex items-center" },
-                                    React.createElement("input", {
-                                        type: "checkbox",
-                                        checked: structures.indexOf(s) !== -1,
-                                        onChange: function() { toggleStructure(s); },
-                                        className: "mr-2"
-                                    }),
-                                    s
-                                );
-                            })
-                        ),
-                        // Structure Filters
-                        React.createElement("label", { className: "block text-sm mb-2" }, "Structure Filters:"),
-                        React.createElement("div", { className: "mb-4" },
-                            React.createElement("label", { className: "block text-xs mb-1" }, "Temple Type:"),
-                            React.createElement("select", {
-                                value: filters.temple_type,
-                                onChange: function(e) { setFilters(Object.assign({}, filters, { temple_type: e.target.value })); },
-                                className: "w-full bg-gray-700 text-white p-2 rounded mb-2"
-                            }, ["Any", "Desert", "Jungle", "Swamp", "Igloo"].map(function(t) {
-                                return React.createElement("option", { key: t, value: t }, t);
-                            })),
-                            React.createElement("label", { className: "block text-xs mb-1" }, "Bastion Type:"),
-                            React.createElement("select", {
-                                value: filters.bastion_type,
-                                onChange: function(e) { setFilters(Object.assign({}, filters, { bastion_type: e.target.value })); },
-                                className: "w-full bg-gray-700 text-white p-2 rounded mb-2"
-                            }, ["Any", "Hoglin Stable", "Housing Units", "Treasure", "Bridge"].map(function(t) {
-                                return React.createElement("option", { key: t, value: t }, t);
-                            })),
-                            React.createElement("label", { className: "block text-xs mb-1" }, "Max Stronghold Distance:"),
-                            React.createElement("input", {
-                                type: "number",
-                                value: filters.stronghold_distance,
-                                onChange: function(e) { setFilters(Object.assign({}, filters, { stronghold_distance: parseFloat(e.target.value) || 0 })); },
-                                className: "w-full bg-gray-700 text-white p-2 rounded"
-                            })
-                        ),
-                        // Priority Selection
-                        React.createElement("label", { className: "block text-sm mb-2" }, "Priority:"),
-                        React.createElement("div", { className: "mb-4" },
-                            React.createElement("label", { className: "flex items-center mb-2" },
-                                React.createElement("input", {
-                                    type: "radio",
-                                    name: "priority",
-                                    value: "none",
-                                    checked: priority === "none",
-                                    onChange: function(e) { setPriority(e.target.value); },
-                                    className: "mr-2"
-                                }),
-                                "None"
-                            ),
-                            React.createElement("label", { className: "flex items-center" },
-                                React.createElement("input", {
-                                    type: "radio",
-                                    name: "priority",
-                                    value: "distance",
-                                    checked: priority === "distance",
-                                    onChange: function(e) { setPriority(e.target.value); },
-                                    className: "mr-2"
-                                }),
-                                "Closer Structures"
-                            )
-                        ),
-                        // Radius Slider
-                        React.createElement("label", { className: "block text-sm mb-2" }, "Search Radius (blocks): ", radius),
-                        React.createElement("input", {
-                            type: "range",
-                            min: "100",
-                            max: "4000",
-                            value: radius,
-                            onChange: function(e) { setRadius(parseInt(e.target.value)); },
-                            className: "w-full mb-4"
-                        }),
-                        // Profile Management
-                        React.createElement("label", { className: "block text-sm mb-2" }, "Saved Profiles:"),
-                        React.createElement("select", {
-                            value: selectedProfile,
-                            onChange: function(e) { loadProfile(e.target.value); },
-                            className: "w-full bg-gray-700 text-white p-2 rounded mb-2"
-                        },
-                            React.createElement("option", { value: "" }, "Select Profile"),
-                            Object.keys(profiles).map(function(p) {
-                                return React.createElement("option", { key: p, value: p }, p);
-                            })
-                        ),
-                        React.createElement("div", { className: "flex gap-2 mb-4" },
-                            React.createElement("button", {
-                                onClick: saveProfile,
-                                className: "bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
-                            }, "Save Profile"),
-                            React.createElement("button", {
-                                onClick: deleteProfile,
-                                className: "bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
-                            }, "Delete Profile")
-                        ),
-                        // Controls
-                        React.createElement("div", { className: "flex flex-col gap-2 mb-4" },
-                            React.createElement("button", {
-                                onClick: findValidSeed,
-                                disabled: isRunning,
-                                className: "px-4 py-2 rounded transition " + (isRunning ? "bg-gray-500 cursor-not-allowed" : "bg-green-500 hover:bg-green-600") + " text-white"
-                            }, "Generate Seed"),
-                            React.createElement("button", {
-                                onClick: stopSearch,
-                                disabled: !isRunning,
-                                className: "px-4 py-2 rounded transition " + (!isRunning ? "bg-gray-500 cursor-not-allowed" : "bg-red-500 hover:bg-red-600") + " text-white"
-                            }, "Stop Search"),
-                            React.createElement("button", {
-                                onClick: exportResults,
-                                disabled: !currentSeed,
-                                className: "px-4 py-2 rounded transition " + (!currentSeed ? "bg-gray-500 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600") + " text-white"
-                            }, "Export Results"),
-                            React.createElement("button", {
-                                onClick: copySeed,
-                                disabled: !currentSeed,
-                                className: "px-4 py-2 rounded transition " + (!currentSeed ? "bg-gray-500 cursor-not-allowed" : "bg-purple-500 hover:bg-purple-600") + " text-white"
-                            }, "Copy Seed"),
-                            React.createElement("button", {
-                                onClick: resetSettings,
-                                className: "bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition"
-                            }, "Reset Settings")
-                        ),
-                        // Progress and Stats
-                        React.createElement("div", { className: "mb-4" },
-                            React.createElement("div", { className: "w-full bg-gray-700 rounded-full h-2.5 mb-2" },
-                                React.createElement("div", { className: "bg-green-500 h-2.5 rounded-full", style: { width: progress + "%" } })
-                            ),
-                            React.createElement("p", { className: "text-sm" }, "Attempts: ", attempts, " | Time: ", ((Date.now() - startTime) / 1000).toFixed(1), "s")
-                        ),
-                        // Result Display
-                        React.createElement("textarea", {
-                            value: result,
-                            readOnly: true,
-                            className: "w-full h-48 bg-gray-700 text-white p-2 rounded resize-none"
-                        })
-                    ),
-                    // Right Map Panel
-                    React.createElement("div", { className: "flex-1 p-6" },
-                        React.createElement("h2", { className: "text-xl font-bold text-green-400 mb-4" }, "Map Preview"),
-                        React.createElement("div", { className: "flex gap-4 mb-4" },
-                            React.createElement("label", { className: "flex items-center" },
-                                React.createElement("input", {
-                                    type: "radio",
-                                    name: "dimension",
-                                    value: "overworld",
-                                    checked: dimension === "overworld",
-                                    onChange: function(e) { setDimension(e.target.value); },
-                                    className: "mr-2"
-                                }),
-                                "Overworld"
-                            ),
-                            React.createElement("label", { className: "flex items-center" },
-                                React.createElement("input", {
-                                    type: "radio",
-                                    name: "dimension",
-                                    value: "nether",
-                                    checked: dimension === "nether",
-                                    onChange: function(e) { setDimension(e.target.value); },
-                                    className: "mr-2"
-                                }),
-                                "Nether"
-                            )
-                        ),
-                        React.createElement("canvas", {
-                            ref: canvasRef,
-                            width: 600,
-                            height: 600,
-                            className: "border-2 border-gray-700 rounded",
-                            onMouseDown: startPan,
-                            onMouseMove: pan,
-                            onMouseUp: stopPan,
-                            onMouseLeave: stopPan
-                        }),
-                        React.createElement("label", { className: "block text-sm mt-4 mb-2" }, "Zoom: ", zoom.toFixed(1), "x"),
-                        React.createElement("input", {
-                            type: "range",
-                            min: "0.5",
-                            max: "4.0",
-                            step: "0.1",
-                            value: zoom,
-                            onChange: function(e) { setZoom(parseFloat(e.target.value)); },
-                            className: "w-full"
-                        })
-                    )
-                )
+                <div className="container">
+                    {/* Control Panel */}
+                    <div className="control-panel">
+                        <div className="panel">
+                            <h1 className="text-lg font-bold text-green-400 mb-4">Minecraft Seed Generator</h1>
+                            
+                            {error && (
+                                <div className="error-message">
+                                    {error}
+                                </div>
+                            )}
+                            
+                            {showMobileWarning && (
+                                <div className="error-message bg-yellow-900 text-yellow-200">
+                                    Note: Seed generation may be slower on mobile devices.
+                                </div>
+                            )}
+                            
+                            {/* Version Selection */}
+                            <div className="mb-4">
+                                <label className="block text-sm mb-2">Minecraft Version:</label>
+                                <select 
+                                    value={version} 
+                                    onChange={(e) => setVersion(e.target.value)}
+                                    className="input"
+                                >
+                                    {["1.14", "1.15", "1.16", "1.17", "1.18", "1.19", "1.20", "1.21"].map(v => (
+                                        <option key={v} value={v}>{v}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            
+                            {/* Biome Selection */}
+                            <div className="mb-4">
+                                <label className="block text-sm mb-2">Spawn Biomes (up to 3):</label>
+                                {biomes.map((b, i) => (
+                                    <select 
+                                        key={i} 
+                                        value={b} 
+                                        onChange={(e) => {
+                                            const newBiomes = [...biomes];
+                                            newBiomes[i] = e.target.value;
+                                            setBiomes(newBiomes);
+                                        }}
+                                        className="input mb-2"
+                                    >
+                                        {biomeOptions.map(o => (
+                                            <option key={o} value={o}>{o}</option>
+                                        ))}
+                                    </select>
+                                ))}
+                                <button 
+                                    onClick={() => addBiome(biomeOptions[0])}
+                                    className="btn btn-success w-full mt-2"
+                                >
+                                    Add Biome
+                                </button>
+                            </div>
+                            
+                            {/* Structure Selection */}
+                            <div className="mb-4">
+                                <label className="block text-sm mb-2">Structures (up to 3):</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {structureOptions.map(s => (
+                                        <label key={s} className="flex items-center">
+                                            <input 
+                                                type="checkbox"
+                                                checked={structures.includes(s)}
+                                                onChange={() => toggleStructure(s)}
+                                                className="mr-2"
+                                            />
+                                            {s}
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            {/* Structure Filters */}
+                            <div className="mb-4">
+                                <label className="block text-sm mb-2">Structure Filters:</label>
+                                <div className="space-y-2">
+                                    <div>
+                                        <label className="block text-xs mb-1">Temple Type:</label>
+                                        <select 
+                                            value={filters.temple_type}
+                                            onChange={(e) => setFilters({...filters, temple_type: e.target.value})}
+                                            className="input"
+                                        >
+                                            {["Any", "Desert", "Jungle", "Swamp", "Igloo"].map(t => (
+                                                <option key={t} value={t}>{t}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs mb-1">Bastion Type:</label>
+                                        <select 
+                                            value={filters.bastion_type}
+                                            onChange={(e) => setFilters({...filters, bastion_type: e.target.value})}
+                                            className="input"
+                                        >
+                                            {["Any", "Hoglin Stable", "Housing Units", "Treasure", "Bridge"].map(t => (
+                                                <option key={t} value={t}>{t}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs mb-1">Max Stronghold Distance:</label>
+                                        <input 
+                                            type="number"
+                                            value={filters.stronghold_distance}
+                                            onChange={(e) => setFilters({...filters, stronghold_distance: parseFloat(e.target.value) || 0})}
+                                            className="input"
+                                            min="0"
+                                            max="4000"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Priority Selection */}
+                            <div className="mb-4">
+                                <label className="block text-sm mb-2">Priority:</label>
+                                <div className="space-y-2">
+                                    <label className="flex items-center">
+                                        <input 
+                                            type="radio"
+                                            name="priority"
+                                            value="none"
+                                            checked={priority === "none"}
+                                            onChange={(e) => setPriority(e.target.value)}
+                                            className="mr-2"
+                                        />
+                                        None
+                                    </label>
+                                    <label className="flex items-center">
+                                        <input 
+                                            type="radio"
+                                            name="priority"
+                                            value="distance"
+                                            checked={priority === "distance"}
+                                            onChange={(e) => setPriority(e.target.value)}
+                                            className="mr-2"
+                                        />
+                                        Closer Structures
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            {/* Radius Slider */}
+                            <div className="mb-4">
+                                <label className="block text-sm mb-2">Search Radius (blocks): {radius}</label>
+                                <input 
+                                    type="range"
+                                    min="100"
+                                    max="4000"
+                                    value={radius}
+                                    onChange={(e) => setRadius(parseInt(e.target.value))}
+                                    className="input-range"
+                                />
+                                <div className="flex justify-between text-xs text-gray-400">
+                                    <span>100</span>
+                                    <span>4000</span>
+                                </div>
+                            </div>
+                            
+                            {/* Profile Management */}
+                            <div className="mb-4">
+                                <label className="block text-sm mb-2">Saved Profiles:</label>
+                                <select 
+                                    value={selectedProfile}
+                                    onChange={(e) => loadProfile(e.target.value)}
+                                    className="input mb-2"
+                                >
+                                    <option value="">Select Profile</option>
+                                    {Object.keys(profiles).map(p => (
+                                        <option key={p} value={p}>{p}</option>
+                                    ))}
+                                </select>
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={saveProfile}
+                                        className="btn btn-secondary flex-1"
+                                    >
+                                        Save Profile
+                                    </button>
+                                    <button 
+                                        onClick={deleteProfile}
+                                        className="btn btn-danger flex-1"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            {/* Controls */}
+                            <div className="mb-4 space-y-2">
+                                <button 
+                                    onClick={findValidSeed}
+                                    disabled={isRunning}
+                                    className={`btn btn-primary w-full ${isRunning ? 'opacity-75' : ''}`}
+                                >
+                                    {isRunning ? 'Generating...' : 'Generate Seed'}
+                                </button>
+                                <button 
+                                    onClick={stopSearch}
+                                    disabled={!isRunning}
+                                    className={`btn btn-danger w-full ${!isRunning ? 'opacity-75' : ''}`}
+                                >
+                                    Stop Search
+                                </button>
+                                <button 
+                                    onClick={exportResults}
+                                    disabled={!currentSeed}
+                                    className={`btn btn-secondary w-full ${!currentSeed ? 'opacity-75' : ''}`}
+                                >
+                                    Export Results
+                                </button>
+                                <button 
+                                    onClick={copySeed}
+                                    disabled={!currentSeed}
+                                    className={`btn btn-warning w-full ${!currentSeed ? 'opacity-75' : ''}`}
+                                >
+                                    Copy Seed
+                                </button>
+                                <button 
+                                    onClick={resetSettings}
+                                    className="btn btn-success w-full"
+                                >
+                                    Reset Settings
+                                </button>
+                            </div>
+                            
+                            {/* Progress and Stats */}
+                            <div className="mb-4">
+                                <div className="progress-container">
+                                    <div className="progress-bar" style={{width: \`\${progress}%\`}}></div>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span>Attempts: {attempts}</span>
+                                    <span>Time: {formatTime()}s</span>
+                                </div>
+                            </div>
+                            
+                            {/* Result Display */}
+                            <textarea 
+                                value={result}
+                                readOnly
+                                className="result-textarea"
+                                placeholder="Generated seed results will appear here..."
+                            ></textarea>
+                        </div>
+                    </div>
+                    
+                    {/* Map Panel */}
+                    <div className="map-panel">
+                        <h2 className="text-lg font-bold text-green-400 mb-4">Map Preview</h2>
+                        
+                        <div className="flex gap-4 mb-4">
+                            <label className="flex items-center">
+                                <input 
+                                    type="radio"
+                                    name="dimension"
+                                    value="overworld"
+                                    checked={dimension === "overworld"}
+                                    onChange={(e) => setDimension(e.target.value)}
+                                    className="mr-2"
+                                />
+                                Overworld
+                            </label>
+                            <label className="flex items-center">
+                                <input 
+                                    type="radio"
+                                    name="dimension"
+                                    value="nether"
+                                    checked={dimension === "nether"}
+                                    onChange={(e) => setDimension(e.target.value)}
+                                    className="mr-2"
+                                />
+                                Nether
+                            </label>
+                        </div>
+                        
+                        <div className="canvas-container">
+                            <canvas
+                                ref={canvasRef}
+                                onMouseDown={handlePanStart}
+                                onMouseMove={handlePanMove}
+                                onMouseUp={handlePanEnd}
+                                onMouseLeave={handlePanEnd}
+                                onTouchStart={handlePanStart}
+                                onTouchMove={handlePanMove}
+                                onTouchEnd={handlePanEnd}
+                            ></canvas>
+                        </div>
+                        
+                        <div className="mt-4 w-full">
+                            <label className="block text-sm mb-2">Zoom: {zoom.toFixed(1)}x</label>
+                            <input 
+                                type="range"
+                                min="0.5"
+                                max="4.0"
+                                step="0.1"
+                                value={zoom}
+                                onChange={(e) => setZoom(parseFloat(e.target.value))}
+                                className="input-range"
+                            />
+                        </div>
+                    </div>
+                </div>
             );
         }
-
+        
         // Render App
-        var root = ReactDOM.createRoot(document.getElementById("root"));
+        const root = ReactDOM.createRoot(document.getElementById("root"));
         root.render(React.createElement(App));
     </script>
 </body>
 </html>
+```
