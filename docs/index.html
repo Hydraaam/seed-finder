@@ -133,7 +133,7 @@
             border-radius: 999px;
             transition: width 0.2s;
         }
-        .result-textarea {
+        .result-textarea, .debug-log {
             width: 100%;
             min-height: 120px;
             background-color: #374151;
@@ -143,6 +143,10 @@
             resize: vertical;
             font-family: monospace;
             font-size: 0.875rem;
+        }
+        .debug-log {
+            max-height: 200px;
+            overflow-y: auto;
         }
         .flex {
             display: flex;
@@ -216,12 +220,15 @@
             .canvas-container {
                 aspect-ratio: 4 / 3;
             }
-            .result-textarea {
+            .result-textarea, .debug-log {
                 min-height: 80px;
                 font-size: 0.75rem;
             }
             .panel {
                 padding: 0.5rem;
+            }
+            .debug-log {
+                max-height: 150px;
             }
         }
     </style>
@@ -268,14 +275,16 @@
                 CHUNK_SIZE: 16,
                 MAX_HEIGHT: 319,
                 MIN_HEIGHT: -64,
-                SEARCH_ITERATIONS: 50000,
+                SEARCH_ITERATIONS: 100000,
+                DEEP_SEARCH_ITERATIONS: 500000,
                 STRUCTURE_REGION_BITS: 12,
                 MAX_CACHED_RESULTS: 1000,
                 NOISE_OCTAVES: 8,
                 NOISE_PERSISTENCE: 0.5,
                 NOISE_SCALE: 0.007,
                 BIOME_ANALYSIS_RADIUS: 4000,
-                SPAWN_CHECK_RADIUS: 32
+                SPAWN_CHECK_RADIUS: 32,
+                MAX_DEBUG_LOGS: 1000 // حداکثر تعداد لاگ‌های دیباگ
             },
             LOOT_TABLES: {
                 Village: ["iron", "food", "emeralds", "tools", "armor"],
@@ -399,15 +408,15 @@
                 const distance = Math.sqrt(blockX * blockX + blockZ * blockZ);
                 if (distance <= radius && distance >= minDist * Constants.WORLD_SETTINGS.CHUNK_SIZE) {
                     if (filters.stronghold_distance && structure === "Stronghold" && distance > filters.stronghold_distance) {
-                        return null;
+                        return [null, `Stronghold too far: ${distance.toFixed(1)} > ${filters.stronghold_distance}`];
                     }
                     
                     const checkDimension = ["Bastion Remnant", "Nether Fortress"].includes(structure) ? "nether" : "overworld";
-                    const checkOffsets = [[0, 0], [8, 8], [-8, -8], [8, -8], [-8, 8]];
+                    const checkOffsets = [[0, 0]]; // فقط یک نقطه بررسی
                     for (const [dx, dz] of checkOffsets) {
                         const biomeResult = getBiomeAt(seed, blockX + dx, blockZ + dz, version, checkDimension);
                         if (biomeRequirements[structure] && !biomeRequirements[structure].includes(biomeResult[0])) {
-                            return null;
+                            return [null, `Invalid biome for ${structure}: ${biomeResult[0]}`];
                         }
                     }
                     
@@ -415,25 +424,29 @@
                     if (structure === "Temple") {
                         const templeTypes = ["Desert", "Jungle", "Swamp", "Igloo"];
                         const templeType = templeTypes[rand.nextInt(templeTypes.length)];
-                        if (filters.temple_type && filters.temple_type !== "Any" && templeType !== filters.temple_type) return null;
+                        if (filters.temple_type && filters.temple_type !== "Any" && templeType !== filters.temple_type) {
+                            return [null, `Temple type mismatch: ${templeType} != ${filters.temple_type}`];
+                        }
                         desc = `Temple (${templeType})`;
                     } else if (structure === "Bastion Remnant") {
                         const bastionTypes = ["Hoglin Stable", "Housing Units", "Treasure", "Bridge"];
                         const bastionType = bastionTypes[rand.nextInt(bastionTypes.length)];
-                        if (filters.bastion_type && filters.bastion_type !== "Any" && bastionType !== filters.bastion_type) return null;
+                        if (filters.bastion_type && filters.bastion_type !== "Any" && bastionType !== filters.bastion_type) {
+                            return [null, `Bastion type mismatch: ${bastionType} != ${filters.bastion_type}`];
+                        }
                         desc = `Bastion Remnant (${bastionType})`;
                     } else if (structure === "Trial Chambers") {
                         const chamberTypes = ["Small", "Medium", "Large"];
                         desc = `Trial Chambers (${chamberTypes[rand.nextInt(chamberTypes.length)]})`;
                     }
                     
-                    return [blockX, blockZ, desc, distance];
+                    return [[blockX, blockZ, desc, distance], null];
                 }
                 
-                return null;
+                return [null, `Structure ${structure} out of range: Distance ${distance.toFixed(1)} (min: ${minDist * Constants.WORLD_SETTINGS.CHUNK_SIZE}, max: ${radius})`];
             } catch (error) {
                 console.error("Error in getStructurePos:", error);
-                return null;
+                return [null, `Error in ${structure}: ${error.message}`];
             }
         }
 
@@ -477,6 +490,7 @@
             const [attempts, setAttempts] = React.useState(0);
             const [startTime, setStartTime] = React.useState(0);
             const [result, setResult] = React.useState("");
+            const [debugLog, setDebugLog] = React.useState([]);
             const [dimension, setDimension] = React.useState("overworld");
             const [zoom, setZoom] = React.useState(1.0);
             const [panOffset, setPanOffset] = React.useState({ x: 0, y: 0 });
@@ -486,6 +500,7 @@
             const [selectedProfile, setSelectedProfile] = React.useState("");
             const [error, setError] = React.useState("");
             const [showMobileWarning, setShowMobileWarning] = React.useState(false);
+            const [deepSearch, setDeepSearch] = React.useState(false);
             
             const canvasRef = React.useRef(null);
             const workerRef = React.useRef(null);
@@ -516,6 +531,7 @@
                     self.onmessage = function(e) {
                         const { version, biomes, structures, radius, filters, maxAttempts, priority } = e.data;
                         let attempts = 0;
+                        const debugLog = [];
                         
                         while (attempts < maxAttempts) {
                             let seed;
@@ -529,6 +545,7 @@
                                 }
                             } catch (e) {
                                 seed = BigInt(Math.floor(Math.random() * 9007199254740991));
+                                debugLog.push(\`Seed \${seed}: Failed to generate: \${e.message}\`);
                             }
                             
                             let biomeValid = true;
@@ -548,16 +565,23 @@
                                             found = true;
                                             break;
                                         }
-                                    } catch (e) {}
+                                    } catch (e) {
+                                        debugLog.push(\`Seed \${seed}: Biome check error for \${biome}: \${e.message}\`);
+                                    }
                                 }
                                 if (!found) {
                                     biomeValid = false;
+                                    debugLog.push(\`Seed \${seed}: Biome \${biome} not found near spawn\`);
                                     break;
                                 }
                             }
                             
                             if (!biomeValid) {
                                 attempts++;
+                                if (debugLog.length > ${Constants.WORLD_SETTINGS.MAX_DEBUG_LOGS}) {
+                                    debugLog.shift();
+                                }
+                                self.postMessage({ progress: Math.min((attempts / maxAttempts) * 100, 99.9), attempts, debugLog });
                                 continue;
                             }
                             
@@ -567,23 +591,26 @@
                             
                             for (const struct of structures) {
                                 try {
-                                    const pos = getStructurePos(seed, struct, version, radius, filters);
+                                    const [pos, reason] = getStructurePos(seed, struct, version, radius, filters);
                                     if (pos) {
                                         structurePositions[struct] = pos;
                                         totalDistance += pos[3];
                                     } else {
                                         valid = false;
+                                        debugLog.push(\`Seed \${seed}: \${reason}\`);
                                         break;
                                     }
                                 } catch (e) {
                                     valid = false;
+                                    debugLog.push(\`Seed \${seed}: Error checking structure \${struct}: \${e.message}\`);
                                     break;
                                 }
                             }
                             
                             if (valid && priority === 'distance' && structures.length > 0) {
-                                if (totalDistance / structures.length > radius * 0.3) {
+                                if (totalDistance / structures.length > radius * 0.5) {
                                     valid = false;
+                                    debugLog.push(\`Seed \${seed}: Average structure distance too large: \${(totalDistance / structures.length).toFixed(1)} > \${(radius * 0.5).toFixed(1)}\`);
                                 }
                             }
                             
@@ -597,20 +624,25 @@
                                         structurePositions,
                                         biomeDist,
                                         biomeDistNether,
-                                        attempts
+                                        attempts,
+                                        debugLog
                                     });
                                     return;
-                                } catch (e) {}
+                                } catch (e) {
+                                    debugLog.push(\`Seed \${seed}: Analysis error: \${e.message}\`);
+                                }
                             }
                             
                             attempts++;
-                            if (attempts % 25 === 0) {
-                                self.postMessage({ progress: Math.min((attempts / maxAttempts) * 100, 99.9), attempts });
+                            if (debugLog.length > ${Constants.WORLD_SETTINGS.MAX_DEBUG_LOGS}) {
+                                debugLog.shift();
                             }
-                            if (attempts % 1000 === 0) setTimeout(() => {}, 0);
+                            if (attempts % 25 === 0) {
+                                self.postMessage({ progress: Math.min((attempts / maxAttempts) * 100, 99.9), attempts, debugLog });
+                            }
                         }
                         
-                        self.postMessage({ status: 'No valid seed found', attempts });
+                        self.postMessage({ status: 'No valid seed found', attempts, debugLog });
                     };
                 `;
                 
@@ -618,12 +650,14 @@
                     const blob = new Blob([workerCode], { type: 'application/javascript' });
                     workerRef.current = new Worker(URL.createObjectURL(blob));
                     workerRef.current.onmessage = (e) => {
-                        const { progress, attempts, status, seed, structurePositions, biomeDist, biomeDistNether } = e.data;
+                        const { progress, attempts, status, seed, structurePositions, biomeDist, biomeDistNether, debugLog } = e.data;
                         if (progress !== undefined) {
                             setProgress(progress);
                             setAttempts(attempts || 0);
+                            setDebugLog(debugLog || []);
                             return;
                         }
+                        setDebugLog(debugLog || []);
                         if (status === "Accepted") {
                             setCurrentSeed(seed);
                             setPositions(structurePositions);
@@ -650,8 +684,10 @@ Biome Distribution (Nether, ${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}x${
 ${biomeDistNetherLines.join("\n")}`);
                             setIsRunning(false);
                         } else {
-                            setResult("No valid seed found. Try adjusting criteria.");
+                            setResult(`No valid seed found after ${attempts} attempts. Check Debug Log for details.`);
                             setIsRunning(false);
+                            setError("Try relaxing filters or increasing radius.");
+                            setTimeout(() => setError(""), 5000);
                         }
                     };
                     workerRef.current.onerror = (error) => {
@@ -675,7 +711,7 @@ ${biomeDistNetherLines.join("\n")}`);
                 const ctx = canvas.getContext("2d");
                 const container = containerRef.current;
                 const dpr = window.devicePixelRatio || 1;
-                const rect = container.getBoundingClientRect();
+                const rect = container.getBoundingRect();
                 canvas.width = rect.width * dpr;
                 canvas.height = rect.height * dpr;
                 ctx.scale(dpr, dpr);
@@ -768,10 +804,11 @@ ${biomeDistNetherLines.join("\n")}`);
                 }
             }, [currentSeed, positions, version, dimension, zoom, panOffset, radius]);
 
-            // Fallback seed generation for non-Web Worker environments
+            // Fallback seed generation
             const generateSeedFallback = (version, biomes, structures, radius, filters, priority, maxAttempts) => {
                 let attempts = 0;
-                while (attempts < Math.min(maxAttempts, 10000)) { // Reduced for performance
+                let debugLog = [];
+                while (attempts < Math.min(maxAttempts, 20000)) {
                     const seed = BigInt(Math.floor(Math.random() * 9007199254740991));
                     let biomeValid = true;
                     const spawnRadius = Constants.WORLD_SETTINGS.SPAWN_CHECK_RADIUS;
@@ -792,14 +829,19 @@ ${biomeDistNetherLines.join("\n")}`);
                         }
                         if (!found) {
                             biomeValid = false;
+                            debugLog.push(`Seed ${seed}: Biome ${biome} not found near spawn`);
                             break;
                         }
                     }
                     
                     if (!biomeValid) {
                         attempts++;
+                        if (debugLog.length > Constants.WORLD_SETTINGS.MAX_DEBUG_LOGS) {
+                            debugLog.shift();
+                        }
                         setProgress(Math.min((attempts / maxAttempts) * 100, 99.9));
                         setAttempts(attempts);
+                        setDebugLog(debugLog);
                         continue;
                     }
                     
@@ -807,37 +849,43 @@ ${biomeDistNetherLines.join("\n")}`);
                     let valid = true;
                     let totalDistance = 0;
                     for (const struct of structures) {
-                        const pos = getStructurePos(seed, struct, version, radius, filters);
+                        const [pos, reason] = getStructurePos(seed, struct, version, radius, filters);
                         if (pos) {
                             structurePositions[struct] = pos;
                             totalDistance += pos[3];
                         } else {
                             valid = false;
+                            debugLog.push(`Seed ${seed}: ${reason}`);
                             break;
                         }
                     }
                     
                     if (valid && priority === 'distance' && structures.length > 0) {
-                        if (totalDistance / structures.length > radius * 0.3) {
+                        if (totalDistance / structures.length > radius * 0.5) {
                             valid = false;
+                            debugLog.push(`Seed ${seed}: Average structure distance too large: ${(totalDistance / structures.length).toFixed(1)} > ${(radius * 0.5).toFixed(1)}`);
                         }
                     }
                     
                     if (valid) {
                         const biomeDist = analyzeBiomeDistribution(seed, version, Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS, 'overworld');
                         const biomeDistNether = analyzeBiomeDistribution(seed, version, Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS, 'nether');
-                        return { seed: seed.toString(), structurePositions, biomeDist, biomeDistNether, attempts };
+                        return { seed: seed.toString(), structurePositions, biomeDist, biomeDistNether, attempts, debugLog };
                     }
                     
                     attempts++;
+                    if (debugLog.length > Constants.WORLD_SETTINGS.MAX_DEBUG_LOGS) {
+                        debugLog.shift();
+                    }
                     setProgress(Math.min((attempts / maxAttempts) * 100, 99.9));
                     setAttempts(attempts);
+                    setDebugLog(debugLog);
                 }
-                return { status: 'No valid seed found', attempts };
+                return { status: 'No valid seed found', attempts, debugLog };
             };
 
             // Find valid seed
-            const findValidSeed = React.useCallback(() => {
+            const findValidSeed = React.useCallback((useDeepSearch = false) => {
                 if (isRunning) return;
                 if (!biomes.length) {
                     setError("Select at least one biome.");
@@ -862,7 +910,11 @@ ${biomeDistNetherLines.join("\n")}`);
                 setAttempts(0);
                 setStartTime(Date.now());
                 setResult("Generating seed...");
+                setDebugLog([]);
                 setError("");
+                setDeepSearch(useDeepSearch);
+                
+                const maxAttempts = useDeepSearch ? Constants.WORLD_SETTINGS.DEEP_SEARCH_ITERATIONS : (window.innerWidth < 768 ? 50000 : Constants.WORLD_SETTINGS.SEARCH_ITERATIONS);
                 
                 if (workerRef.current) {
                     workerRef.current.postMessage({
@@ -872,14 +924,17 @@ ${biomeDistNetherLines.join("\n")}`);
                         radius,
                         filters,
                         priority,
-                        maxAttempts: window.innerWidth < 768 ? 25000 : Constants.WORLD_SETTINGS.SEARCH_ITERATIONS
+                        maxAttempts
                     });
                 } else {
                     setTimeout(() => {
-                        const result = generateSeedFallback(version, biomes, structures, radius, filters, priority, 10000);
+                        const result = generateSeedFallback(version, biomes, structures, radius, filters, priority, maxAttempts);
+                        setDebugLog(result.debugLog || []);
                         if (result.status === 'No valid seed found') {
-                            setResult("No valid seed found. Try adjusting criteria.");
+                            setResult(`No valid seed found after ${result.attempts} attempts. Check Debug Log for details.`);
                             setIsRunning(false);
+                            setError("Try relaxing filters or increasing radius.");
+                            setTimeout(() => setError(""), 5000);
                             return;
                         }
                         setCurrentSeed(result.seed);
@@ -918,6 +973,7 @@ ${biomeDistNetherLines.join("\n")}`);
                 }
                 setIsRunning(false);
                 setResult("Search stopped.");
+                setDebugLog(prev => [...prev, "Search stopped by user"]);
             }, []);
 
             // Handle biome addition
@@ -951,7 +1007,7 @@ ${biomeDistNetherLines.join("\n")}`);
                     return;
                 }
                 try {
-                    const profile = { version, biomes, structures, radius, priority, filters };
+                    const profile = { version, biomes, structures, radius, priority, filters, deepSearch };
                     const newProfiles = { ...profiles, [name.trim()]: profile };
                     setProfiles(newProfiles);
                     localStorage.setItem("profiles", JSON.stringify(newProfiles));
@@ -973,6 +1029,7 @@ ${biomeDistNetherLines.join("\n")}`);
                         setRadius(profile.radius || 500);
                         setPriority(profile.priority || "none");
                         setFilters(profile.filters || { temple_type: "Any", bastion_type: "Any", stronghold_distance: 0 });
+                        setDeepSearch(profile.deepSearch || false);
                         setSelectedProfile(name);
                     } else {
                         setError("Invalid profile data!");
@@ -1013,8 +1070,9 @@ ${biomeDistNetherLines.join("\n")}`);
                         version,
                         biome_distribution_overworld: biomeDist,
                         biome_distribution_nether: biomeDistNether,
+                        debug_log: debugLog,
                         timestamp: new Date().toISOString(),
-                        criteria: { priority, ...filters },
+                        criteria: { priority, deepSearch, ...filters },
                         application: "Minecraft Seed Generator Ultimate",
                         version: "2.0"
                     };
@@ -1051,6 +1109,11 @@ ${biomeDistNetherLines.join("\n")}`);
                 }
             };
 
+            // Clear debug log
+            const clearDebugLog = () => {
+                setDebugLog([]);
+            };
+
             // Handle canvas interactions
             const handlePanStart = (e) => {
                 e.preventDefault();
@@ -1083,12 +1146,14 @@ ${biomeDistNetherLines.join("\n")}`);
                     setRadius(500);
                     setPriority("none");
                     setFilters({ temple_type: "Any", bastion_type: "Any", stronghold_distance: 0 });
+                    setDeepSearch(false);
                     setSelectedProfile("");
                     setCurrentSeed(null);
                     setPositions({});
                     setBiomeDist({});
                     setBiomeDistNether({});
                     setResult("");
+                    setDebugLog([]);
                     setZoom(1.0);
                     setPanOffset({ x: 0, y: 0 });
                 }
@@ -1194,6 +1259,12 @@ ${biomeDistNetherLines.join("\n")}`);
                                 </div>
                             </div>
                             <div className="mb-4">
+                                <label className="flex items-center">
+                                    <input type="checkbox" checked={deepSearch} onChange={(e) => setDeepSearch(e.target.checked)} className="mr-2" aria-label="Deep Search" />
+                                    Deep Search (more attempts)
+                                </label>
+                            </div>
+                            <div className="mb-4">
                                 <label className="block text-sm mb-2">Saved Profiles:</label>
                                 <select value={selectedProfile} onChange={(e) => loadProfile(e.target.value)} className="input mb-2" aria-label="Saved Profiles">
                                     <option value="">Select Profile</option>
@@ -1207,11 +1278,13 @@ ${biomeDistNetherLines.join("\n")}`);
                                 </div>
                             </div>
                             <div className="mb-4 space-y-2">
-                                <button onClick={findValidSeed} disabled={isRunning} className={`btn btn-primary ${isRunning ? 'opacity-75' : ''}`} aria-label="Generate Seed">{isRunning ? 'Generating...' : 'Generate Seed'}</button>
+                                <button onClick={() => findValidSeed(false)} disabled={isRunning} className={`btn btn-primary ${isRunning ? 'opacity-75' : ''}`} aria-label="Generate Seed">{isRunning ? 'Generating...' : 'Generate Seed'}</button>
+                                <button onClick={() => findValidSeed(true)} disabled={isRunning} className={`btn btn-primary ${isRunning ? 'opacity-75' : ''}`} aria-label="Deep Search">Deep Search</button>
                                 <button onClick={stopSearch} disabled={!isRunning} className={`btn btn-danger ${!isRunning ? 'opacity-75' : ''}`} aria-label="Stop Search">Stop Search</button>
                                 <button onClick={exportResults} disabled={!currentSeed} className={`btn btn-secondary ${!currentSeed ? 'opacity-75' : ''}`} aria-label="Export Results">Export Results</button>
                                 <button onClick={copySeed} disabled={!currentSeed} className={`btn btn-warning ${!currentSeed ? 'opacity-75' : ''}`} aria-label="Copy Seed">Copy Seed</button>
                                 <button onClick={resetSettings} className="btn btn-success" aria-label="Reset Settings">Reset Settings</button>
+                                <button onClick={clearDebugLog} className="btn btn-warning" aria-label="Clear Debug Log">Clear Debug Log</button>
                             </div>
                             <div className="mb-4">
                                 <div className="progress-container">
@@ -1222,7 +1295,14 @@ ${biomeDistNetherLines.join("\n")}`);
                                     <span>Time: {formatTime()}s</span>
                                 </div>
                             </div>
-                            <textarea value={result} readOnly className="result-textarea" placeholder="Generated seed results will appear here..." aria-label="Seed Results"></textarea>
+                            <div className="mb-4">
+                                <label className="block text-sm mb-2">Results:</label>
+                                <textarea value={result} readOnly className="result-textarea" placeholder="Generated seed results will appear here..." aria-label="Seed Results"></textarea>
+                            </div>
+                            <div className="mb-4">
+                                <label className="block text-sm mb-2">Debug Log:</label>
+                                <textarea value={debugLog.join("\n")} readOnly className="debug-log scrollbar-custom" placeholder="Debug log will appear here..." aria-label="Debug Log"></textarea>
+                            </div>
                         </div>
                     </div>
                     <div className="map-panel">
@@ -1263,13 +1343,13 @@ ${biomeDistNetherLines.join("\n")}`);
             root.render(React.createElement(App));
         } catch (error) {
             document.getElementById("root").innerHTML = `
-                <div class="container">
-                    <div class="panel">
-                        <div class="error-message">
+                <div className="container">
+                    <div className="panel">
+                        <div className="error-message">
                             <h2>Application Error</h2>
                             <p>Failed to load the Minecraft Seed Generator.</p>
                             <p>Error: ${error.message}</p>
-                            <button onclick="location.reload()" class="btn btn-primary mt-4">Reload Page</button>
+                            <button onclick="location.reload()" className="btn btn-primary mt-4">Reload Page</button>
                         </div>
                     </div>
                 </div>
