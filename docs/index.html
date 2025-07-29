@@ -10,16 +10,32 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
-        body { background-color: #1a1a1a; color: #e0e0e0; font-family: 'Arial', sans-serif; margin: 0; padding: 0; }
+        body { 
+            background-color: #1a1a1a; 
+            color: #e0e0e0; 
+            font-family: 'Arial', sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            overflow-x: hidden;
+        }
         .scrollbar-custom::-webkit-scrollbar { width: 8px; }
         .scrollbar-custom::-webkit-scrollbar-track { background: #2b2b2b; }
         .scrollbar-custom::-webkit-scrollbar-thumb { background: #4caf50; border-radius: 4px; }
         .scrollbar-custom::-webkit-scrollbar-thumb:hover { background: #66bb6a; }
-        .container { display: flex; flex-direction: column; min-height: 100vh; }
-        @media (min-width: 768px) {
-            .container { flex-direction: row; }
+        .container { 
+            display: flex; 
+            flex-direction: column; 
+            min-height: 100vh; 
+            width: 100%;
         }
-        .panel { padding: 1.5rem; }
+        @media (min-width: 768px) {
+            .container { 
+                flex-direction: row; 
+            }
+        }
+        .panel { 
+            padding: 1rem; 
+        }
         .control-panel { 
             width: 100%; 
             background-color: #1f2937; 
@@ -52,6 +68,7 @@
             width: 100%;
             max-width: 600px;
             height: 400px;
+            margin: 0 auto;
         }
         canvas {
             border: 2px solid #374151;
@@ -69,6 +86,7 @@
             transition: all 0.2s;
             cursor: pointer;
             text-align: center;
+            width: 100%;
         }
         .btn-primary { background-color: #10b981; color: white; }
         .btn-primary:hover { background-color: #0d9488; }
@@ -166,6 +184,9 @@
         .grid {
             display: grid;
         }
+        .grid-cols-1 {
+            grid-template-columns: repeat(1, 1fr);
+        }
         .grid-cols-2 {
             grid-template-columns: repeat(2, 1fr);
         }
@@ -175,10 +196,39 @@
         .justify-between {
             justify-content: space-between;
         }
+        .mobile-warning {
+            background-color: #7c2d12;
+            color: #fed7aa;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            text-align: center;
+        }
+        @media (max-width: 767px) {
+            .mobile-header {
+                text-align: center;
+                margin-bottom: 1rem;
+            }
+            .mobile-controls {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            .canvas-container {
+                height: 300px;
+            }
+            .result-textarea {
+                min-height: 80px;
+                font-size: 0.75rem;
+            }
+            .panel {
+                padding: 0.5rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div id="root" class="w-full"></div>
     <script type="text/babel">
         // Enhanced Constants with improved structure data
         const Constants = {
@@ -219,7 +269,7 @@
                 CHUNK_SIZE: 16,
                 MAX_HEIGHT: 319,
                 MIN_HEIGHT: -64,
-                SEARCH_ITERATIONS: 50000, // Increased from 20000
+                SEARCH_ITERATIONS: 50000,
                 STRUCTURE_REGION_BITS: 12,
                 MAX_CACHED_RESULTS: 1000,
                 NOISE_OCTAVES: 8,
@@ -1341,7 +1391,9 @@ Biome Distribution (Nether, \${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}x\
                     {/* Control Panel */}
                     <div className="control-panel">
                         <div className="panel">
-                            <h1 className="text-lg font-bold text-green-400 mb-4">Minecraft Seed Generator</h1>
+                            <div className="mobile-header">
+                                <h1 className="text-lg font-bold text-green-400 mb-4">Minecraft Seed Generator</h1>
+                            </div>
                             
                             {error && (
                                 <div className="error-message">
@@ -1350,7 +1402,7 @@ Biome Distribution (Nether, \${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}x\
                             )}
                             
                             {showMobileWarning && (
-                                <div className="error-message bg-yellow-900 text-yellow-200">
+                                <div className="mobile-warning">
                                     Note: Seed generation may be slower on mobile devices.
                                 </div>
                             )}
@@ -1390,7 +1442,7 @@ Biome Distribution (Nether, \${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}x\
                                 ))}
                                 <button 
                                     onClick={() => addBiome(biomeOptions[0])}
-                                    className="btn btn-success w-full mt-2"
+                                    className="btn btn-success mt-2"
                                 >
                                     Add Biome
                                 </button>
@@ -1515,16 +1567,16 @@ Biome Distribution (Nether, \${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}x\
                                         <option key={p} value={p}>{p}</option>
                                     ))}
                                 </select>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 mobile-controls">
                                     <button 
                                         onClick={saveProfile}
-                                        className="btn btn-secondary flex-1"
+                                        className="btn btn-secondary"
                                     >
                                         Save Profile
                                     </button>
                                     <button 
                                         onClick={deleteProfile}
-                                        className="btn btn-danger flex-1"
+                                        className="btn btn-danger"
                                     >
                                         Delete
                                     </button>
@@ -1536,34 +1588,34 @@ Biome Distribution (Nether, \${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}x\
                                 <button 
                                     onClick={findValidSeed}
                                     disabled={isRunning}
-                                    className={`btn btn-primary w-full ${isRunning ? 'opacity-75' : ''}`}
+                                    className={`btn btn-primary ${isRunning ? 'opacity-75' : ''}`}
                                 >
                                     {isRunning ? 'Generating...' : 'Generate Seed'}
                                 </button>
                                 <button 
                                     onClick={stopSearch}
                                     disabled={!isRunning}
-                                    className={`btn btn-danger w-full ${!isRunning ? 'opacity-75' : ''}`}
+                                    className={`btn btn-danger ${!isRunning ? 'opacity-75' : ''}`}
                                 >
                                     Stop Search
                                 </button>
                                 <button 
                                     onClick={exportResults}
                                     disabled={!currentSeed}
-                                    className={`btn btn-secondary w-full ${!currentSeed ? 'opacity-75' : ''}`}
+                                    className={`btn btn-secondary ${!currentSeed ? 'opacity-75' : ''}`}
                                 >
                                     Export Results
                                 </button>
                                 <button 
                                     onClick={copySeed}
                                     disabled={!currentSeed}
-                                    className={`btn btn-warning w-full ${!currentSeed ? 'opacity-75' : ''}`}
+                                    className={`btn btn-warning ${!currentSeed ? 'opacity-75' : ''}`}
                                 >
                                     Copy Seed
                                 </button>
                                 <button 
                                     onClick={resetSettings}
-                                    className="btn btn-success w-full"
+                                    className="btn btn-success"
                                 >
                                     Reset Settings
                                 </button>
@@ -1572,7 +1624,7 @@ Biome Distribution (Nether, \${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}x\
                             {/* Progress and Stats */}
                             <div className="mb-4">
                                 <div className="progress-container">
-                                    <div className="progress-bar" style={{width: \`\${progress}%\`}}></div>
+                                    <div className="progress-bar" style={{width: `${progress}%`}}></div>
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span>Attempts: {attempts}</span>
@@ -1649,9 +1701,28 @@ Biome Distribution (Nether, \${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}x\
             );
         }
         
-        // Render App
-        const root = ReactDOM.createRoot(document.getElementById("root"));
-        root.render(React.createElement(App));
+        // Render App with error boundary
+        try {
+            const root = ReactDOM.createRoot(document.getElementById("root"));
+            root.render(React.createElement(App));
+        } catch (error) {
+            console.error("Failed to initialize React:", error);
+            document.getElementById("root").innerHTML = `
+                <div class="container">
+                    <div class="panel">
+                        <div class="error-message">
+                            <h2>Application Error</h2>
+                            <p>Failed to load the Minecraft Seed Generator.</p>
+                            <p>Please ensure your browser supports modern JavaScript features.</p>
+                            <p>Error: ${error.message}</p>
+                            <button onclick="location.reload()" class="btn btn-primary mt-4">
+                                Reload Page
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
     </script>
 </body>
 </html>
