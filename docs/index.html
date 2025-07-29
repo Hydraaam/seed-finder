@@ -6,7 +6,8 @@
     <title>Minecraft Seed Generator Ultimate</title>
     <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/core-js/3.36.0/minified.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
         body { 
@@ -236,6 +237,22 @@
 <body>
     <div id="root" class="w-full"></div>
     <script type="text/babel">
+        // بررسی پشتیبانی BigInt
+        if (typeof BigInt === "undefined") {
+            document.getElementById("root").innerHTML = `
+                <div className="container">
+                    <div className="panel">
+                        <div className="error-message">
+                            <h2>Browser Error</h2>
+                            <p>This browser does not support BigInt. Please use a modern browser like Chrome, Firefox, or Edge.</p>
+                            <button onclick="location.reload()" className="btn btn-primary mt-4">Reload Page</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            throw new Error("BigInt not supported");
+        }
+
         // Constants
         const Constants = {
             STRUCTURES: {
@@ -282,9 +299,9 @@
                 NOISE_OCTAVES: 8,
                 NOISE_PERSISTENCE: 0.5,
                 NOISE_SCALE: 0.007,
-                BIOME_ANALYSIS_RADIUS: 4000,
+                BIOME_ANALYSIS_RADIUS: 2000,
                 SPAWN_CHECK_RADIUS: 32,
-                MAX_DEBUG_LOGS: 1000 // حداکثر تعداد لاگ‌های دیباگ
+                MAX_DEBUG_LOGS: 500
             },
             LOOT_TABLES: {
                 Village: ["iron", "food", "emeralds", "tools", "armor"],
@@ -301,7 +318,15 @@
         );
 
         function MinecraftRandom(seed) {
-            let instanceSeed = typeof seed === 'bigint' ? seed : BigInt(seed);
+            if (seed == null || seed === "") {
+                throw new Error("Invalid seed value: Seed cannot be null or empty");
+            }
+            let instanceSeed;
+            try {
+                instanceSeed = typeof seed === 'bigint' ? seed : BigInt(String(seed));
+            } catch (e) {
+                throw new Error(`Invalid seed value: ${e.message}`);
+            }
             instanceSeed = instanceSeed & ((BigInt(1) << BigInt(48)) - BigInt(1));
             
             return {
@@ -323,31 +348,38 @@
 
         function perlinNoise(x, z, seed, scale = Constants.WORLD_SETTINGS.NOISE_SCALE, octaves = Constants.WORLD_SETTINGS.NOISE_OCTAVES) {
             let total = 0;
-            for (let i = 0; i < octaves; i++) {
-                const frequency = scale * Math.pow(2, i);
-                const amplitude = Math.pow(Constants.WORLD_SETTINGS.NOISE_PERSISTENCE, i);
-                const randSeed = seed + BigInt(i * 1000);
-                const rand = MinecraftRandom(randSeed);
-                const gridX = Math.floor(x * frequency);
-                const gridZ = Math.floor(z * frequency);
-                const n00 = rand.nextFloat() * 2 - 1;
-                const n10 = rand.nextFloat() * 2 - 1;
-                const n01 = rand.nextFloat() * 2 - 1;
-                const n11 = rand.nextFloat() * 2 - 1;
-                const fx = (x * frequency) - gridX;
-                const fz = (z * frequency) - gridZ;
-                const u = fx * fx * (3 - 2 * fx);
-                const v = fz * fz * (3 - 2 * fz);
-                const lerpX0 = n00 + u * (n10 - n00);
-                const lerpX1 = n01 + u * (n11 - n01);
-                total += (lerpX0 + v * (lerpX1 - lerpX0)) * amplitude;
+            try {
+                for (let i = 0; i < octaves; i++) {
+                    const frequency = scale * Math.pow(2, i);
+                    const amplitude = Math.pow(Constants.WORLD_SETTINGS.NOISE_PERSISTENCE, i);
+                    const randSeed = seed + BigInt(i * 1000);
+                    const rand = MinecraftRandom(randSeed);
+                    const gridX = Math.floor(x * frequency);
+                    const gridZ = Math.floor(z * frequency);
+                    const n00 = rand.nextFloat() * 2 - 1;
+                    const n10 = rand.nextFloat() * 2 - 1;
+                    const n01 = rand.nextFloat() * 2 - 1;
+                    const n11 = rand.nextFloat() * 2 - 1;
+                    const fx = (x * frequency) - gridX;
+                    const fz = (z * frequency) - gridZ;
+                    const u = fx * fx * (3 - 2 * fx);
+                    const v = fz * fz * (3 - 2 * fz);
+                    const lerpX0 = n00 + u * (n10 - n00);
+                    const lerpX1 = n01 + u * (n11 - n01);
+                    total += (lerpX0 + v * (lerpX1 - lerpX0)) * amplitude;
+                }
+            } catch (e) {
+                console.error("Error in perlinNoise:", e);
             }
             return total;
         }
 
         function getBiomeAt(seed, x, z, version, dimension = "overworld") {
             try {
-                seed = typeof seed === 'string' ? BigInt(seed) : seed;
+                if (seed == null || seed === "") {
+                    throw new Error("Invalid seed value: Seed cannot be null or empty");
+                }
+                seed = typeof seed === 'string' && /^[0-9-]+$/.test(seed) ? BigInt(seed) : seed;
                 const biomeMap = Constants.BIOME_WEIGHTS[dimension.toUpperCase()] || Constants.BIOME_WEIGHTS.OVERWORLD;
                 const noiseSeed = seed + BigInt(x) * BigInt(341873128712) + BigInt(z) * BigInt(132897987541);
                 const noise = perlinNoise(x, z, noiseSeed);
@@ -381,7 +413,7 @@
                 
                 let structureSeed = seed;
                 for (let i = 0; i < structure.length; i++) {
-                    structureSeed = (structureSeed * 31 + BigInt(structure.charCodeAt(i))) & ((BigInt(1) << BigInt(48)) - BigInt(1));
+                    structureSeed = (structureSeed * BigInt(31) + BigInt(structure.charCodeAt(i))) & ((BigInt(1) << BigInt(48)) - BigInt(1));
                 }
                 
                 const rand = MinecraftRandom(seed + structureSeed);
@@ -412,9 +444,9 @@
                     }
                     
                     const checkDimension = ["Bastion Remnant", "Nether Fortress"].includes(structure) ? "nether" : "overworld";
-                    const checkOffsets = [[0, 0]]; // فقط یک نقطه بررسی
-                    for (const [dx, dz] of checkOffsets) {
-                        const biomeResult = getBiomeAt(seed, blockX + dx, blockZ + dz, version, checkDimension);
+                    const checkOffsets = [[0, 0]];
+                    for (const offset of checkOffsets) {
+                        const biomeResult = getBiomeAt(seed, blockX + offset[0], blockZ + offset[1], version, checkDimension);
                         if (biomeRequirements[structure] && !biomeRequirements[structure].includes(biomeResult[0])) {
                             return [null, `Invalid biome for ${structure}: ${biomeResult[0]}`];
                         }
@@ -445,7 +477,7 @@
                 
                 return [null, `Structure ${structure} out of range: Distance ${distance.toFixed(1)} (min: ${minDist * Constants.WORLD_SETTINGS.CHUNK_SIZE}, max: ${radius})`];
             } catch (error) {
-                console.error("Error in getStructurePos:", error);
+                console.error(`Error in getStructurePos for ${structure}:`, error);
                 return [null, `Error in ${structure}: ${error.message}`];
             }
         }
@@ -453,8 +485,8 @@
         function analyzeBiomeDistribution(seed, version, radius = Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS, dimension = "overworld") {
             try {
                 const isMobile = window.innerWidth < 768;
-                const step = isMobile ? Math.floor(radius / 50) : Math.floor(radius / 100);
-                const points = Array.from({ length: isMobile ? 100 : 200 }, (_, i) => -radius + (i * 2 * radius) / (isMobile ? 99 : 199));
+                const step = isMobile ? Math.floor(radius / 25) : Math.floor(radius / 50);
+                const points = Array.from({ length: isMobile ? 50 : 100 }, (_, i) => -radius + (i * 2 * radius) / (isMobile ? 49 : 99));
                 const biomeCounts = {};
                 
                 for (const x of points) {
@@ -510,7 +542,14 @@
             React.useEffect(() => {
                 try {
                     const savedProfiles = localStorage.getItem("profiles");
-                    if (savedProfiles) setProfiles(JSON.parse(savedProfiles));
+                    if (savedProfiles) {
+                        const parsed = JSON.parse(savedProfiles);
+                        if (typeof parsed === 'object' && parsed !== null) {
+                            setProfiles(parsed);
+                        } else {
+                            throw new Error("Invalid profile data format");
+                        }
+                    }
                 } catch (e) {
                     setError("Failed to load profiles. Using defaults.");
                     setTimeout(() => setError(""), 5000);
@@ -529,120 +568,128 @@
                     self.spacing = ${JSON.stringify(spacing)};
                     
                     self.onmessage = function(e) {
-                        const { version, biomes, structures, radius, filters, maxAttempts, priority } = e.data;
-                        let attempts = 0;
-                        const debugLog = [];
-                        
-                        while (attempts < maxAttempts) {
-                            let seed;
-                            try {
-                                if (self.crypto?.getRandomValues) {
-                                    const array = new BigUint64Array(1);
-                                    self.crypto.getRandomValues(array);
-                                    seed = array[0];
-                                } else {
-                                    seed = BigInt(Math.floor(Math.random() * 9007199254740991));
-                                }
-                            } catch (e) {
-                                seed = BigInt(Math.floor(Math.random() * 9007199254740991));
-                                debugLog.push(\`Seed \${seed}: Failed to generate: \${e.message}\`);
-                            }
+                        try {
+                            const { version, biomes, structures, radius, filters, maxAttempts, priority } = e.data;
+                            let attempts = 0;
+                            const debugLog = [];
                             
-                            let biomeValid = true;
-                            const spawnRadius = ${Constants.WORLD_SETTINGS.SPAWN_CHECK_RADIUS};
-                            const spawnPoints = [];
-                            for (let x = -spawnRadius; x <= spawnRadius; x += 16) {
-                                for (let z = -spawnRadius; z <= spawnRadius; z += 16) {
-                                    spawnPoints.push([x, z]);
+                            while (attempts < maxAttempts) {
+                                let seed;
+                                try {
+                                    if (self.crypto?.getRandomValues) {
+                                        const array = new BigUint64Array(1);
+                                        self.crypto.getRandomValues(array);
+                                        seed = array[0];
+                                    } else {
+                                        seed = BigInt(Math.floor(Math.random() * 9007199254740991));
+                                    }
+                                } catch (e) {
+                                    debugLog.push("Seed generation failed: " + e.message);
+                                    attempts++;
+                                    continue;
                                 }
-                            }
-                            
-                            for (const biome of biomes) {
-                                let found = false;
-                                for (const [x, z] of spawnPoints) {
+                                
+                                let biomeValid = true;
+                                const spawnRadius = ${Constants.WORLD_SETTINGS.SPAWN_CHECK_RADIUS};
+                                const spawnPoints = [];
+                                for (let x = -spawnRadius; x <= spawnRadius; x += 16) {
+                                    for (let z = -spawnRadius; z <= spawnRadius; z += 16) {
+                                        spawnPoints.push([x, z]);
+                                    }
+                                }
+                                
+                                for (const biome of biomes) {
+                                    let found = false;
+                                    for (const point of spawnPoints) {
+                                        try {
+                                            const biomeResult = getBiomeAt(seed, point[0], point[1], version, 'overworld');
+                                            if (biomeResult[0] === biome) {
+                                                found = true;
+                                                break;
+                                            }
+                                        } catch (e) {
+                                            debugLog.push("Seed " + seed + ": Biome check error for " + biome + ": " + e.message);
+                                        }
+                                    }
+                                    if (!found) {
+                                        biomeValid = false;
+                                        debugLog.push("Seed " + seed + ": Biome " + biome + " not found near spawn");
+                                        break;
+                                    }
+                                }
+                                
+                                if (!biomeValid) {
+                                    attempts++;
+                                    if (debugLog.length > ${Constants.WORLD_SETTINGS.MAX_DEBUG_LOGS}) {
+                                        debugLog.splice(0, debugLog.length - ${Constants.WORLD_SETTINGS.MAX_DEBUG_LOGS});
+                                    }
+                                    self.postMessage({ progress: Math.min((attempts / maxAttempts) * 100, 99.9), attempts, debugLog });
+                                    continue;
+                                }
+                                
+                                let structurePositions = {};
+                                let valid = true;
+                                let totalDistance = 0;
+                                
+                                for (const struct of structures) {
                                     try {
-                                        if (getBiomeAt(seed, x, z, version, 'overworld')[0] === biome) {
-                                            found = true;
+                                        const result = getStructurePos(seed, struct, version, radius, filters);
+                                        const pos = result[0];
+                                        const reason = result[1];
+                                        if (pos) {
+                                            structurePositions[struct] = pos;
+                                            totalDistance += pos[3];
+                                        } else {
+                                            valid = false;
+                                            debugLog.push("Seed " + seed + ": " + reason);
                                             break;
                                         }
                                     } catch (e) {
-                                        debugLog.push(\`Seed \${seed}: Biome check error for \${biome}: \${e.message}\`);
-                                    }
-                                }
-                                if (!found) {
-                                    biomeValid = false;
-                                    debugLog.push(\`Seed \${seed}: Biome \${biome} not found near spawn\`);
-                                    break;
-                                }
-                            }
-                            
-                            if (!biomeValid) {
-                                attempts++;
-                                if (debugLog.length > ${Constants.WORLD_SETTINGS.MAX_DEBUG_LOGS}) {
-                                    debugLog.shift();
-                                }
-                                self.postMessage({ progress: Math.min((attempts / maxAttempts) * 100, 99.9), attempts, debugLog });
-                                continue;
-                            }
-                            
-                            let structurePositions = {};
-                            let valid = true;
-                            let totalDistance = 0;
-                            
-                            for (const struct of structures) {
-                                try {
-                                    const [pos, reason] = getStructurePos(seed, struct, version, radius, filters);
-                                    if (pos) {
-                                        structurePositions[struct] = pos;
-                                        totalDistance += pos[3];
-                                    } else {
                                         valid = false;
-                                        debugLog.push(\`Seed \${seed}: \${reason}\`);
+                                        debugLog.push("Seed " + seed + ": Error checking structure " + struct + ": " + e.message);
                                         break;
                                     }
-                                } catch (e) {
-                                    valid = false;
-                                    debugLog.push(\`Seed \${seed}: Error checking structure \${struct}: \${e.message}\`);
-                                    break;
+                                }
+                                
+                                if (valid && priority === 'distance' && structures.length > 0) {
+                                    if (totalDistance / structures.length > radius * 0.5) {
+                                        valid = false;
+                                        debugLog.push("Seed " + seed + ": Average structure distance too large: " + (totalDistance / structures.length).toFixed(1) + " > " + (radius * 0.5).toFixed(1));
+                                    }
+                                }
+                                
+                                if (valid) {
+                                    try {
+                                        const biomeDist = analyzeBiomeDistribution(seed, version, ${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}, 'overworld');
+                                        const biomeDistNether = analyzeBiomeDistribution(seed, version, ${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}, 'nether');
+                                        self.postMessage({
+                                            seed: seed.toString(),
+                                            status: 'Accepted',
+                                            structurePositions,
+                                            biomeDist,
+                                            biomeDistNether,
+                                            attempts,
+                                            debugLog
+                                        });
+                                        return;
+                                    } catch (e) {
+                                        debugLog.push("Seed " + seed + ": Analysis error: " + e.message);
+                                    }
+                                }
+                                
+                                attempts++;
+                                if (debugLog.length > ${Constants.WORLD_SETTINGS.MAX_DEBUG_LOGS}) {
+                                    debugLog.splice(0, debugLog.length - ${Constants.WORLD_SETTINGS.MAX_DEBUG_LOGS});
+                                }
+                                if (attempts % 25 === 0) {
+                                    self.postMessage({ progress: Math.min((attempts / maxAttempts) * 100, 99.9), attempts, debugLog });
                                 }
                             }
                             
-                            if (valid && priority === 'distance' && structures.length > 0) {
-                                if (totalDistance / structures.length > radius * 0.5) {
-                                    valid = false;
-                                    debugLog.push(\`Seed \${seed}: Average structure distance too large: \${(totalDistance / structures.length).toFixed(1)} > \${(radius * 0.5).toFixed(1)}\`);
-                                }
-                            }
-                            
-                            if (valid) {
-                                try {
-                                    const biomeDist = analyzeBiomeDistribution(seed, version, ${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}, 'overworld');
-                                    const biomeDistNether = analyzeBiomeDistribution(seed, version, ${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}, 'nether');
-                                    self.postMessage({
-                                        seed: seed.toString(),
-                                        status: 'Accepted',
-                                        structurePositions,
-                                        biomeDist,
-                                        biomeDistNether,
-                                        attempts,
-                                        debugLog
-                                    });
-                                    return;
-                                } catch (e) {
-                                    debugLog.push(\`Seed \${seed}: Analysis error: \${e.message}\`);
-                                }
-                            }
-                            
-                            attempts++;
-                            if (debugLog.length > ${Constants.WORLD_SETTINGS.MAX_DEBUG_LOGS}) {
-                                debugLog.shift();
-                            }
-                            if (attempts % 25 === 0) {
-                                self.postMessage({ progress: Math.min((attempts / maxAttempts) * 100, 99.9), attempts, debugLog });
-                            }
+                            self.postMessage({ status: 'No valid seed found', attempts, debugLog });
+                        } catch (error) {
+                            self.postMessage({ error: "Worker error: " + error.message });
                         }
-                        
-                        self.postMessage({ status: 'No valid seed found', attempts, debugLog });
                     };
                 `;
                 
@@ -650,7 +697,13 @@
                     const blob = new Blob([workerCode], { type: 'application/javascript' });
                     workerRef.current = new Worker(URL.createObjectURL(blob));
                     workerRef.current.onmessage = (e) => {
-                        const { progress, attempts, status, seed, structurePositions, biomeDist, biomeDistNether, debugLog } = e.data;
+                        const { progress, attempts, status, seed, structurePositions, biomeDist, biomeDistNether, debugLog, error } = e.data;
+                        if (error) {
+                            setError(error);
+                            setIsRunning(false);
+                            setTimeout(() => setError(""), 5000);
+                            return;
+                        }
                         if (progress !== undefined) {
                             setProgress(progress);
                             setAttempts(attempts || 0);
@@ -665,39 +718,42 @@
                             setBiomeDistNether(biomeDistNether || {});
                             const seedNum = Number(seed.substring(0, 15));
                             const structureLines = Object.entries(structurePositions)
-                                .map(([key, pos]) => `  ${pos[2]} at (${pos[0]}, ${pos[1]}) (Distance: ${pos[3].toFixed(1)})`)
+                                .map(([key, pos]) => "  " + pos[2] + " at (" + pos[0] + ", " + pos[1] + ") (Distance: " + pos[3].toFixed(1) + ")")
                                 .sort((a, b) => parseFloat(a.match(/Distance: ([\d.]+)/)[1]) - parseFloat(b.match(/Distance: ([\d.]+)/)[1]));
                             const biomeDistLines = Object.entries(biomeDist)
                                 .sort(([,a], [,b]) => b - a)
-                                .map(([biome, percent]) => `  ${biome}: ${percent.toFixed(2)}%`);
+                                .map(([biome, percent]) => "  " + biome + ": " + percent.toFixed(2) + "%");
                             const biomeDistNetherLines = Object.entries(biomeDistNether)
                                 .sort(([,a], [,b]) => b - a)
-                                .map(([biome, percent]) => `  ${biome}: ${percent.toFixed(2)}%`);
-                            setResult(`Seed: ${seedNum}
-Biomes: ${biomes.join(", ")}
-Version: ${version}
-Structures:
-${structureLines.join("\n")}
-Biome Distribution (Overworld, ${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}x${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS} blocks):
-${biomeDistLines.join("\n")}
-Biome Distribution (Nether, ${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}x${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS} blocks):
-${biomeDistNetherLines.join("\n")}`);
+                                .map(([biome, percent]) => "  " + biome + ": " + percent.toFixed(2) + "%");
+                            setResult("Seed: " + seedNum + "\n" +
+                                      "Biomes: " + biomes.join(", ") + "\n" +
+                                      "Version: " + version + "\n" +
+                                      "Structures:\n" +
+                                      structureLines.join("\n") + "\n" +
+                                      "Biome Distribution (Overworld, " + Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS + "x" + Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS + " blocks):\n" +
+                                      biomeDistLines.join("\n") + "\n" +
+                                      "Biome Distribution (Nether, " + Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS + "x" + Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS + " blocks):\n" +
+                                      biomeDistNetherLines.join("\n"));
                             setIsRunning(false);
                         } else {
-                            setResult(`No valid seed found after ${attempts} attempts. Check Debug Log for details.`);
+                            setResult("No valid seed found after " + attempts + " attempts. Check Debug Log for details.");
                             setIsRunning(false);
                             setError("Try relaxing filters or increasing radius.");
                             setTimeout(() => setError(""), 5000);
                         }
                     };
                     workerRef.current.onerror = (error) => {
-                        setError(`Worker error: ${error.message || "Unknown error"}`);
+                        setError("Worker error: " + (error.message || "Unknown error") + " at line " + error.lineno);
                         setIsRunning(false);
                         setTimeout(() => setError(""), 5000);
+                        console.error("Worker error details:", error);
                     };
                 } catch (e) {
+                    console.error("Failed to initialize Web Worker:", e);
                     setError("Failed to initialize Web Worker. Using fallback mode.");
                     workerRef.current = null;
+                    setTimeout(() => setError(""), 5000);
                 }
                 
                 return () => workerRef.current?.terminate();
@@ -705,13 +761,19 @@ ${biomeDistNetherLines.join("\n")}`);
 
             // Canvas rendering
             React.useEffect(() => {
-                if (!canvasRef.current || !currentSeed || !Object.keys(positions).length) return;
+                if (!canvasRef.current || !containerRef.current || !currentSeed || !Object.keys(positions).length) return;
                 
                 const canvas = canvasRef.current;
                 const ctx = canvas.getContext("2d");
                 const container = containerRef.current;
+                if (!ctx || !container) {
+                    setError("Canvas or container not available.");
+                    setTimeout(() => setError(""), 5000);
+                    return;
+                }
+                
                 const dpr = window.devicePixelRatio || 1;
-                const rect = container.getBoundingRect();
+                const rect = container.getBoundingClientRect();
                 canvas.width = rect.width * dpr;
                 canvas.height = rect.height * dpr;
                 ctx.scale(dpr, dpr);
@@ -742,8 +804,8 @@ ${biomeDistNetherLines.join("\n")}`);
                 };
                 
                 const isMobile = window.innerWidth < 768;
-                const analysisRadius = Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS;
-                const step = isMobile ? Math.floor(analysisRadius / 40) : Math.floor(analysisRadius / 80);
+                const analysisRadius = isMobile ? Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS / 2 : Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS;
+                const step = isMobile ? Math.floor(analysisRadius / 20) : Math.floor(analysisRadius / 40);
                 const visibleMinX = -width/(2*scale) - panOffset.x/scale;
                 const visibleMaxX = width/(2*scale) - panOffset.x/scale;
                 const visibleMinZ = -height/(2*scale) - panOffset.y/scale;
@@ -763,7 +825,9 @@ ${biomeDistNetherLines.join("\n")}`);
                                 ctx.fillRect(screenX - step * scale / 2, screenY - step * scale / 2, step * scale, step * scale);
                                 ctx.globalAlpha = 1.0;
                             }
-                        } catch (e) {}
+                        } catch (e) {
+                            console.error("Error rendering biome:", e);
+                        }
                     }
                 }
                 
@@ -783,7 +847,9 @@ ${biomeDistNetherLines.join("\n")}`);
                     if (!pos || (dimension === "nether" && !["Bastion Remnant", "Nether Fortress"].includes(struct)) ||
                         (dimension === "overworld" && ["Bastion Remnant", "Nether Fortress"].includes(struct))) continue;
                     
-                    const [x, z, desc] = pos;
+                    const x = pos[0];
+                    const z = pos[1];
+                    const desc = pos[2];
                     const screenX = centerX + (x * scale) + panOffset.x;
                     const screenY = centerY + (z * scale) + panOffset.y;
                     if (screenX > -20 && screenX < width + 20 && screenY > -20 && screenY < height + 20) {
@@ -809,7 +875,15 @@ ${biomeDistNetherLines.join("\n")}`);
                 let attempts = 0;
                 let debugLog = [];
                 while (attempts < Math.min(maxAttempts, 20000)) {
-                    const seed = BigInt(Math.floor(Math.random() * 9007199254740991));
+                    let seed;
+                    try {
+                        seed = BigInt(Math.floor(Math.random() * 9007199254740991));
+                    } catch (e) {
+                        debugLog.push("Seed generation failed: " + e.message);
+                        attempts++;
+                        continue;
+                    }
+                    
                     let biomeValid = true;
                     const spawnRadius = Constants.WORLD_SETTINGS.SPAWN_CHECK_RADIUS;
                     const spawnPoints = [];
@@ -821,15 +895,16 @@ ${biomeDistNetherLines.join("\n")}`);
                     
                     for (const biome of biomes) {
                         let found = false;
-                        for (const [x, z] of spawnPoints) {
-                            if (getBiomeAt(seed, x, z, version, 'overworld')[0] === biome) {
+                        for (const point of spawnPoints) {
+                            const biomeResult = getBiomeAt(seed, point[0], point[1], version, 'overworld');
+                            if (biomeResult[0] === biome) {
                                 found = true;
                                 break;
                             }
                         }
                         if (!found) {
                             biomeValid = false;
-                            debugLog.push(`Seed ${seed}: Biome ${biome} not found near spawn`);
+                            debugLog.push("Seed " + seed + ": Biome " + biome + " not found near spawn");
                             break;
                         }
                     }
@@ -837,7 +912,7 @@ ${biomeDistNetherLines.join("\n")}`);
                     if (!biomeValid) {
                         attempts++;
                         if (debugLog.length > Constants.WORLD_SETTINGS.MAX_DEBUG_LOGS) {
-                            debugLog.shift();
+                            debugLog.splice(0, debugLog.length - Constants.WORLD_SETTINGS.MAX_DEBUG_LOGS);
                         }
                         setProgress(Math.min((attempts / maxAttempts) * 100, 99.9));
                         setAttempts(attempts);
@@ -849,13 +924,15 @@ ${biomeDistNetherLines.join("\n")}`);
                     let valid = true;
                     let totalDistance = 0;
                     for (const struct of structures) {
-                        const [pos, reason] = getStructurePos(seed, struct, version, radius, filters);
+                        const result = getStructurePos(seed, struct, version, radius, filters);
+                        const pos = result[0];
+                        const reason = result[1];
                         if (pos) {
                             structurePositions[struct] = pos;
                             totalDistance += pos[3];
                         } else {
                             valid = false;
-                            debugLog.push(`Seed ${seed}: ${reason}`);
+                            debugLog.push("Seed " + seed + ": " + reason);
                             break;
                         }
                     }
@@ -863,7 +940,7 @@ ${biomeDistNetherLines.join("\n")}`);
                     if (valid && priority === 'distance' && structures.length > 0) {
                         if (totalDistance / structures.length > radius * 0.5) {
                             valid = false;
-                            debugLog.push(`Seed ${seed}: Average structure distance too large: ${(totalDistance / structures.length).toFixed(1)} > ${(radius * 0.5).toFixed(1)}`);
+                            debugLog.push("Seed " + seed + ": Average structure distance too large: " + (totalDistance / structures.length).toFixed(1) + " > " + (radius * 0.5).toFixed(1));
                         }
                     }
                     
@@ -875,7 +952,7 @@ ${biomeDistNetherLines.join("\n")}`);
                     
                     attempts++;
                     if (debugLog.length > Constants.WORLD_SETTINGS.MAX_DEBUG_LOGS) {
-                        debugLog.shift();
+                        debugLog.splice(0, debugLog.length - Constants.WORLD_SETTINGS.MAX_DEBUG_LOGS);
                     }
                     setProgress(Math.min((attempts / maxAttempts) * 100, 99.9));
                     setAttempts(attempts);
@@ -887,17 +964,17 @@ ${biomeDistNetherLines.join("\n")}`);
             // Find valid seed
             const findValidSeed = React.useCallback((useDeepSearch = false) => {
                 if (isRunning) return;
-                if (!biomes.length) {
-                    setError("Select at least one biome.");
+                if (!biomes.length || biomes.some(b => !Constants.BIOME_WEIGHTS.OVERWORLD[b])) {
+                    setError("Select at least one valid biome.");
                     setTimeout(() => setError(""), 5000);
                     return;
                 }
-                if (!structures.length) {
-                    setError("Select at least one structure.");
+                if (!structures.length || structures.some(s => !Constants.STRUCTURES[s])) {
+                    setError("Select at least one valid structure.");
                     setTimeout(() => setError(""), 5000);
                     return;
                 }
-                if (radius < 100 || radius > 4000) {
+                if (radius < 100 || radius > 4000 || isNaN(radius)) {
                     setError("Radius must be between 100 and 4000.");
                     setTimeout(() => setError(""), 5000);
                     return;
@@ -923,15 +1000,15 @@ ${biomeDistNetherLines.join("\n")}`);
                         structures,
                         radius,
                         filters,
-                        priority,
-                        maxAttempts
+                        maxAttempts,
+                        priority
                     });
                 } else {
                     setTimeout(() => {
                         const result = generateSeedFallback(version, biomes, structures, radius, filters, priority, maxAttempts);
                         setDebugLog(result.debugLog || []);
                         if (result.status === 'No valid seed found') {
-                            setResult(`No valid seed found after ${result.attempts} attempts. Check Debug Log for details.`);
+                            setResult("No valid seed found after " + result.attempts + " attempts. Check Debug Log for details.");
                             setIsRunning(false);
                             setError("Try relaxing filters or increasing radius.");
                             setTimeout(() => setError(""), 5000);
@@ -943,23 +1020,23 @@ ${biomeDistNetherLines.join("\n")}`);
                         setBiomeDistNether(result.biomeDistNether);
                         const seedNum = Number(result.seed.substring(0, 15));
                         const structureLines = Object.entries(result.structurePositions)
-                            .map(([key, pos]) => `  ${pos[2]} at (${pos[0]}, ${pos[1]}) (Distance: ${pos[3].toFixed(1)})`)
+                            .map(([key, pos]) => "  " + pos[2] + " at (" + pos[0] + ", " + pos[1] + ") (Distance: " + pos[3].toFixed(1) + ")")
                             .sort((a, b) => parseFloat(a.match(/Distance: ([\d.]+)/)[1]) - parseFloat(b.match(/Distance: ([\d.]+)/)[1]));
                         const biomeDistLines = Object.entries(result.biomeDist)
                             .sort(([,a], [,b]) => b - a)
-                            .map(([biome, percent]) => `  ${biome}: ${percent.toFixed(2)}%`);
+                            .map(([biome, percent]) => "  " + biome + ": " + percent.toFixed(2) + "%");
                         const biomeDistNetherLines = Object.entries(result.biomeDistNether)
                             .sort(([,a], [,b]) => b - a)
-                            .map(([biome, percent]) => `  ${biome}: ${percent.toFixed(2)}%`);
-                        setResult(`Seed: ${seedNum}
-Biomes: ${biomes.join(", ")}
-Version: ${version}
-Structures:
-${structureLines.join("\n")}
-Biome Distribution (Overworld, ${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}x${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS} blocks):
-${biomeDistLines.join("\n")}
-Biome Distribution (Nether, ${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS}x${Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS} blocks):
-${biomeDistNetherLines.join("\n")}`);
+                            .map(([biome, percent]) => "  " + biome + ": " + percent.toFixed(2) + "%");
+                        setResult("Seed: " + seedNum + "\n" +
+                                  "Biomes: " + biomes.join(", ") + "\n" +
+                                  "Version: " + version + "\n" +
+                                  "Structures:\n" +
+                                  structureLines.join("\n") + "\n" +
+                                  "Biome Distribution (Overworld, " + Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS + "x" + Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS + " blocks):\n" +
+                                  biomeDistLines.join("\n") + "\n" +
+                                  "Biome Distribution (Nether, " + Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS + "x" + Constants.WORLD_SETTINGS.BIOME_ANALYSIS_RADIUS + " blocks):\n" +
+                                  biomeDistNetherLines.join("\n"));
                         setIsRunning(false);
                     }, 0);
                 }
@@ -1009,8 +1086,8 @@ ${biomeDistNetherLines.join("\n")}`);
                 try {
                     const profile = { version, biomes, structures, radius, priority, filters, deepSearch };
                     const newProfiles = { ...profiles, [name.trim()]: profile };
-                    setProfiles(newProfiles);
                     localStorage.setItem("profiles", JSON.stringify(newProfiles));
+                    setProfiles(newProfiles);
                     setSelectedProfile(name.trim());
                 } catch (e) {
                     setError("Failed to save profile!");
@@ -1040,12 +1117,12 @@ ${biomeDistNetherLines.join("\n")}`);
 
             // Delete profile
             const deleteProfile = () => {
-                if (selectedProfile && window.confirm(`Delete profile "${selectedProfile}"?`)) {
+                if (selectedProfile && window.confirm("Delete profile \"" + selectedProfile + "\"?")) {
                     try {
                         const newProfiles = { ...profiles };
                         delete newProfiles[selectedProfile];
-                        setProfiles(newProfiles);
                         localStorage.setItem("profiles", JSON.stringify(newProfiles));
+                        setProfiles(newProfiles);
                         setSelectedProfile("");
                     } catch (e) {
                         setError("Failed to delete profile!");
@@ -1080,7 +1157,7 @@ ${biomeDistNetherLines.join("\n")}`);
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
                     a.href = url;
-                    a.download = `minecraft_seed_${Date.now()}.json`;
+                    a.download = "minecraft_seed_" + Date.now() + ".json";
                     a.click();
                     URL.revokeObjectURL(url);
                 } catch (e) {
@@ -1193,7 +1270,7 @@ ${biomeDistNetherLines.join("\n")}`);
                                         const newBiomes = [...biomes];
                                         newBiomes[i] = e.target.value;
                                         setBiomes(newBiomes);
-                                    }} className="input mb-2" aria-label={`Biome ${i + 1}`}>
+                                    }} className="input mb-2" aria-label={"Biome " + (i + 1)}>
                                         {biomeOptions.map(o => (
                                             <option key={o} value={o}>{o}</option>
                                         ))}
@@ -1278,17 +1355,17 @@ ${biomeDistNetherLines.join("\n")}`);
                                 </div>
                             </div>
                             <div className="mb-4 space-y-2">
-                                <button onClick={() => findValidSeed(false)} disabled={isRunning} className={`btn btn-primary ${isRunning ? 'opacity-75' : ''}`} aria-label="Generate Seed">{isRunning ? 'Generating...' : 'Generate Seed'}</button>
-                                <button onClick={() => findValidSeed(true)} disabled={isRunning} className={`btn btn-primary ${isRunning ? 'opacity-75' : ''}`} aria-label="Deep Search">Deep Search</button>
-                                <button onClick={stopSearch} disabled={!isRunning} className={`btn btn-danger ${!isRunning ? 'opacity-75' : ''}`} aria-label="Stop Search">Stop Search</button>
-                                <button onClick={exportResults} disabled={!currentSeed} className={`btn btn-secondary ${!currentSeed ? 'opacity-75' : ''}`} aria-label="Export Results">Export Results</button>
-                                <button onClick={copySeed} disabled={!currentSeed} className={`btn btn-warning ${!currentSeed ? 'opacity-75' : ''}`} aria-label="Copy Seed">Copy Seed</button>
+                                <button onClick={() => findValidSeed(false)} disabled={isRunning} className={"btn btn-primary" + (isRunning ? ' opacity-75' : '')} aria-label="Generate Seed">{isRunning ? 'Generating...' : 'Generate Seed'}</button>
+                                <button onClick={() => findValidSeed(true)} disabled={isRunning} className={"btn btn-primary" + (isRunning ? ' opacity-75' : '')} aria-label="Deep Search">Deep Search</button>
+                                <button onClick={stopSearch} disabled={!isRunning} className={"btn btn-danger" + (!isRunning ? ' opacity-75' : '')} aria-label="Stop Search">Stop Search</button>
+                                <button onClick={exportResults} disabled={!currentSeed} className={"btn btn-secondary" + (!currentSeed ? ' opacity-75' : '')} aria-label="Export Results">Export Results</button>
+                                <button onClick={copySeed} disabled={!currentSeed} className={"btn btn-warning" + (!currentSeed ? ' opacity-75' : '')} aria-label="Copy Seed">Copy Seed</button>
                                 <button onClick={resetSettings} className="btn btn-success" aria-label="Reset Settings">Reset Settings</button>
                                 <button onClick={clearDebugLog} className="btn btn-warning" aria-label="Clear Debug Log">Clear Debug Log</button>
                             </div>
                             <div className="mb-4">
                                 <div className="progress-container">
-                                    <div className="progress-bar" style={{width: `${progress}%`}}></div>
+                                    <div className="progress-bar" style={{width: progress + "%"}}></div>
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span>Attempts: {attempts}</span>
@@ -1354,6 +1431,7 @@ ${biomeDistNetherLines.join("\n")}`);
                     </div>
                 </div>
             `;
+            console.error("Application error:", error);
         }
     </script>
 </body>
