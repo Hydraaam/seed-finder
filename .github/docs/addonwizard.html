@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hydra Minecraft Add-on Studio</title>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.22.5/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuidv4.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(45deg, #121214, #1c1c22);
+            color: #e6eef8;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+        .tab {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin-right: 4px;
+        }
+        .tab-active {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .tab:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+        .input, .textarea {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
+            color: #e6eef8;
+            padding: 8px;
+        }
+        .button {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 8px 16px;
+            transition: background 0.2s;
+        }
+        .button:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+        .drop-area {
+            border: 2px dashed rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.02);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            height: 200px;
+            cursor: pointer;
+        }
+        .drop-area.dragover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const now = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+        const HydraStudio = () => {
+            const [tab, setTab] = useState('Metadata');
+            const [identifier, setIdentifier] = useState('hydraw:custom_item');
+            const [displayName, setDisplayName] = useState("Hydra's Final Item");
+            const [creativeCategory, setCreativeCategory] = useState('itemGroup.name.tools');
+            const [maxStack, setMaxStack] = useState(1);
+            const [durability, setDurability] = useState(0);
+            const [registerCreative, setRegisterCreative] = useState(true);
+            const [textureFile, setTextureFile] = useState(null);
+            const [iconFile, setIconFile] = useState(null);
+            const [texturePath, setTexturePath] = useState('textures/items/custom_item');
+            const [itemType, setItemType] = useState('Custom');
+            const [typeFields, setTypeFields] = useState({});
+            const [components, setComponents] = useState({});
+            const [predefinedComponent, setPredefinedComponent] = useState('None');
+            const [predefinedFields, setPredefinedFields] = useState({});
+            const [events, setEvents] = useState({});
+            const [behaviorSnippets, setBehaviorSnippets] = useState('');
+            const [addonName, setAddonName] = useState('hydra_addon_final');
+            const [minEngine, setMinEngine] = useState('1.20.30');
+            const [exportFormat, setExportFormat] = useState('mcpack (recommended)');
+            const [jsonPreview, setJsonPreview] = useState('');
+            const [imagePreview, setImagePreview] = useState(null);
+            const [logs, setLogs] = useState([]);
+            const [lastSave, setLastSave] = useState(null);
+
+            useEffect(() => {
+                const autosave = localStorage.getItem('hydra_autosave');
+                if (autosave && window.confirm('An autosave was found. Restore it?')) {
+                    const data = JSON.parse(autosave);
+                    setIdentifier(data.meta.identifier || 'hydraw:custom_item');
+                    setDisplayName(data.meta.display_name || "Hydra's Final Item");
+                    setCreativeCategory(data.meta.creative_category || 'itemGroup.name.tools');
+                    setMaxStack(data.meta.max_stack || 1);
+                    setDurability(data.meta.durability || 0);
+                    setMinEngine(data.meta.min_engine || '1.20.30');
+                    setAddonName(data.meta.addon_name || 'hydra_addon_final');
+                    setComponents(data.components || {});
+                    setEvents(data.events || {});
+                    setBehaviorSnippets(data.behavior_snippets || '');
+                    setTexturePath(data.files?.texture_path || 'textures/items/custom_item');
+                    log('Autosave restored');
+                }
+                generatePreview();
+            }, []);
+
+            useEffect(() => {
+                const timer = setInterval(() => {
+                    autoSave();
+                }, 60 * 1000);
+                return () => clearInterval(timer);
+            }, [identifier, displayName, creativeCategory, maxStack, durability, minEngine, addonName, components, events, behaviorSnippets, texturePath]);
+
+            const log = (message, level = 'INFO') => {
+                const line = `[${now()}] [${level}] ${message}`;
+                setLogs(prev => [...prev, line].slice(-50));
+                console.log(line);
+            };
+
+            const showError = (message) => {
+                alert(`Error: ${message}`);
+                log(message, 'ERROR');
+            };
+
+            const validateJSON = (text, context) => {
+                try {
+                    if (text.trim()) JSON.parse(text);
+                    return null;
+                } catch (e) {
+                    const pos = e.pos || 0;
+                    const textUpToPos = text.slice(0, pos);
+                    const lineNo = textUpToPos.split('\n').length;
+                    const lastNewline = textUpToPos.lastIndexOf('\n');
+                    const col = pos - lastNewline;
+                    showError(`${context} JSON error at line ${lineNo}, column ${col}: ${e.message}`);
+                    return e;
+                }
+            };
+
+            const parseMinEngine = () => {
+                try {
+                    const txt = minEngine.trim();
+                    if (!txt) return [1, 20, 30];
+                    const parts = txt.split('.').map(x => parseInt(x)).filter(x => !isNaN(x));
+                    while (parts.length < 3) parts.push(0);
+                    return parts;
+                } catch {
+                    log('Invalid min engine version; using default 1.20.30', 'WARN');
+                    return [1, 20, 30];
+                }
+            };
+
+            const collectConfig = () => {
+                if (!identifier || !identifier.includes(':')) {
+                    throw new Error('Identifier must be in namespace:name format');
+                }
+                const cfg = {
+                    format_version: minEngine || '1.20.30',
+                    'minecraft:item': {
+                        description: {
+                            identifier,
+                            register_to_create_menu: registerCreative,
+                            ...(displayName.trim() && { description: displayName })
+                        },
+                        components: {}
+                    }
+                };
+                const comps = cfg['minecraft:item'].components;
+                if (textureFile) {
+                    comps['minecraft:icon'] = { texture: texturePath || `textures/items/${textureFile.name.split('.')[0]}` };
+                }
+                comps['minecraft:max_stack_size'] = parseInt(maxStack);
+                if (parseInt(durability) > 0) {
+                    comps['minecraft:durability'] = { max_durability: parseInt(durability) };
+                }
+                if (itemType === 'Consumable') {
+                    const food = {
+                        nutrition: parseInt(typeFields.Nutrition || 4),
+                        saturation_modifier: 'normal'
+                    };
+                    if (typeFields['Always Edible']) food.can_always_eat = true;
+                    comps['minecraft:food'] = food;
+                } else if (itemType === 'Tool') {
+                    comps['minecraft:durability'] = { max_durability: parseInt(typeFields.Durability || 250) };
+                    comps['minecraft:digger'] = { speed: parseInt(typeFields['Mining Speed'] || 4) };
+                    comps['hydra:power'] = { value: parseInt(typeFields.Power || 10) };
+                    comps['hydra:precision'] = { value: parseFloat(typeFields.Precision || 0.5) };
+                    if (typeFields['Additional Capabilities']) {
+                        const caps = JSON.parse(typeFields['Additional Capabilities'] || '{}');
+                        Object.assign(comps, caps);
+                    }
+                } else if (itemType === 'Weapon') {
+                    comps['minecraft:durability'] = { max_durability: parseInt(typeFields.Durability || 500) };
+                    comps['minecraft:damage'] = { damage: parseInt(typeFields['Attack Damage'] || 6) };
+                    comps['hydra:power'] = { value: parseInt(typeFields.Power || 10) };
+                    comps['hydra:precision'] = { value: parseFloat(typeFields.Precision || 0.5) };
+                    if (typeFields['Additional Capabilities']) {
+                        const caps = JSON.parse(typeFields['Additional Capabilities'] || '{}');
+                        Object.assign(comps, caps);
+                    }
+                } else if (itemType === 'Custom' && typeFields['Custom JSON Fragment']) {
+                    Object.assign(comps, JSON.parse(typeFields['Custom JSON Fragment'] || '{}'));
+                }
+                Object.assign(comps, components);
+                if (Object.keys(events).length > 0) {
+                    cfg['minecraft:item'].events = events;
+                }
+                if (behaviorSnippets.trim()) {
+                    cfg.behaviors = JSON.parse(behaviorSnippets || '{}');
+                }
+                return cfg;
+            };
+
+            const generatePreview = () => {
+                try {
+                    const cfg = collectConfig();
+                    setJsonPreview(JSON.stringify(cfg, null, 2));
+                    setImagePreview(textureFile ? URL.createObjectURL(textureFile) : iconFile ? URL.createObjectURL(iconFile) : null);
+                    log('Preview generated');
+                } catch (e) {
+                    showError(e.message);
+                }
+            };
+
+            const validateAllJson = () => {
+                try {
+                    for (const [key, value] of Object.entries(components)) {
+                        JSON.stringify(value);
+                    }
+                    for (const [key, value] of Object.entries(events)) {
+                        JSON.stringify(value);
+                    }
+                    if (behaviorSnippets.trim()) JSON.parse(behaviorSnippets);
+                    if (itemType === 'Custom' && typeFields['Custom JSON Fragment']) {
+                        JSON.parse(typeFields['Custom JSON Fragment']);
+                    }
+                    if (['Tool', 'Weapon'].includes(itemType) && typeFields['Additional Capabilities']) {
+                        JSON.parse(typeFields['Additional Capabilities']);
+                    }
+                    const cfg = collectConfig();
+                    JSON.stringify(cfg);
+                    alert('All JSON validated successfully');
+                    log('Validation OK');
+                    return true;
+                } catch (e) {
+                    showError(e.message);
+                    return false;
+                }
+            };
+
+            const exportNow = async () => {
+                if (!validateAllJson()) return;
+                const format = exportFormat.toLowerCase();
+                const cfg = collectConfig();
+                const name = addonName || `${identifier.replace(':', '_')}_addon`;
+                const zip = new JSZip();
+                const behavior = zip.folder('behavior_pack').folder('items');
+                const resource = zip.folder('resource_pack').folder('textures').folder('items');
+                behavior.file(`${identifier.split(':')[1]}.json`, JSON.stringify(cfg, null, 2));
+                const minEngine = parseMinEngine();
+                const manifestTemplate = (packName, packType) => ({
+                    format_version: 2,
+                    header: {
+                        name: `${name} - ${packName}`,
+                        description: `Generated by Hydra Minecraft Add-on Studio`,
+                        uuid: uuid.v4(),
+                        version: [1, 0, 0],
+                        min_engine_version: minEngine
+                    },
+                    modules: [{ type: packType, uuid: uuid.v4(), version: [1, 0, 0] }]
+                });
+                zip.folder('behavior_pack').file('manifest.json', JSON.stringify(manifestTemplate('Behavior Pack', 'data'), null, 2));
+                zip.folder('resource_pack').file('manifest.json', JSON.stringify(manifestTemplate('Resource Pack', 'resources'), null, 2));
+                if (textureFile) {
+                    resource.file(textureFile.name, textureFile);
+                }
+                if (iconFile) {
+                    const img = new Image();
+                    img.src = URL.createObjectURL(iconFile);
+                    await new Promise(resolve => img.onload = resolve);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 128; canvas.height = 128;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, 128, 128);
+                    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                    zip.folder('resource_pack').file('pack_icon.png', blob);
+                }
+                const zipBlob = await zip.generateAsync({ type: 'blob' });
+                const created = [];
+                if (format.includes('json-only')) {
+                    saveAs(new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' }), `${name}_item.json`);
+                    created.push(`${name}_item.json`);
+                } else {
+                    saveAs(zipBlob, `${name}.zip`);
+                    created.push(`${name}.zip`);
+                    if (format.includes('mcpack')) {
+                        saveAs(zipBlob, `${name}.mcpack`);
+                        created.push(`${name}.mcpack`);
+                    }
+                    if (format.includes('mcaddon')) {
+                        saveAs(zipBlob, `${name}.mcaddon`);
+                        created.push(`${name}.mcaddon`);
+                    }
+                }
+                alert(`Exported: ${created.join(', ')}`);
+                log(`Export finished: ${created.join(', ')}`);
+            };
+
+            const autoSave = () => {
+                try {
+                    localStorage.setItem('hydra_autosave', JSON.stringify({
+                        meta: { identifier, display_name: displayName, creative_category: creativeCategory, max_stack: maxStack, durability, min_engine: minEngine, addon_name: addonName },
+                        components,
+                        events,
+                        behavior_snippets: behaviorSnippets,
+                        files: { texture_path: texturePath }
+                    }));
+                    log('Auto-saved project');
+                } catch (e) {
+                    log(`Auto-save failed: ${e.message}`, 'WARN');
+                }
+            };
+
+            const newProject = () => {
+                setIdentifier('hydraw:custom_item');
+                setDisplayName("Hydra's Final Item");
+                setCreativeCategory('itemGroup.name.tools');
+                setMaxStack(1);
+                setDurability(0);
+                setMinEngine('1.20.30');
+                setAddonName('hydra_addon_final');
+                setComponents({});
+                setEvents({});
+                setBehaviorSnippets('');
+                setTextureFile(null);
+                setIconFile(null);
+                setTexturePath('textures/items/custom_item');
+                setTypeFields({});
+                setPredefinedComponent('None');
+                setPredefinedFields({});
+                setJsonPreview('');
+                setImagePreview(null);
+                setLastSave(null);
+                log('New project created');
+                generatePreview();
+            };
+
+            const saveProject = () => {
+                const data = JSON.stringify({
+                    meta: { identifier, display_name: displayName, creative_category: creativeCategory, max_stack: maxStack, durability, min_engine: minEngine, addon_name: addonName },
+                    components,
+                    events,
+                    behavior_snippets: behaviorSnippets,
+                    files: { texture_path: texturePath }
+                });
+                const blob = new Blob([data], { type: 'application/json' });
+                saveAs(blob, `${addonName || 'hydra_project'}.hmasproj`);
+                setLastSave(addonName || 'hydra_project');
+                log(`Project saved: ${addonName || 'hydra_project'}.hmasproj`);
+            };
+
+            const openProject = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    try {
+                        const data = JSON.parse(reader.result);
+                        setIdentifier(data.meta.identifier || 'hydraw:custom_item');
+                        setDisplayName(data.meta.display_name || "Hydra's Final Item");
+                        setCreativeCategory(data.meta.creative_category || 'itemGroup.name.tools');
+                        setMaxStack(data.meta.max_stack || 1);
+                        setDurability(data.meta.durability || 0);
+                        setMinEngine(data.meta.min_engine || '1.20.30');
+                        setAddonName(data.meta.addon_name || 'hydra_addon_final');
+                        setComponents(data.components || {});
+                        setEvents(data.events || {});
+                        setBehaviorSnippets(data.behavior_snippets || '');
+                        setTexturePath(data.files?.texture_path || 'textures/items/custom_item');
+                        log(`Project opened: ${file.name}`);
+                        generatePreview();
+                    } catch (err) {
+                        showError(`Failed to open project: ${err.message}`);
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            const handleDrop = (e, setter) => {
+                e.preventDefault();
+                const file = e.dataTransfer.files[0];
+                if (file && ['image/png', 'image/jpeg'].includes(file.type)) {
+                    setter(file);
+                    generatePreview();
+                } else {
+                    showError('Please drop a PNG or JPEG image');
+                }
+            };
+
+            const renderTypeFields = () => {
+                if (itemType === 'Consumable') {
+                    return (
+                        <>
+                            <div className="flex items-center space-x-4">
+                                <label>Nutrition:</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="20"
+                                    value={typeFields.Nutrition || 4}
+                                    onChange={e => setTypeFields({ ...typeFields, Nutrition: e.target.value })}
+                                    className="input w-24"
+                                />
+                            </div>
+                            <div className="flex items-center space-x-4">
+                                <label>Saturation:</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="20"
+                                    value={typeFields.Saturation || 5}
+                                    onChange={e => setTypeFields({ ...typeFields, Saturation: e.target.value })}
+                                    className="input w-24"
+                                />
+                            </div>
+                            <div className="flex items-center space-x-4">
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        checked={typeFields['Always Edible'] || false}
+                                        onChange={e => setTypeFields({ ...typeFields, 'Always Edible': e.target.checked })}
+                                    />
+                                    Always Edible
+                                </label>
+                            </div>
+                        </>
+                    );
+                } else if (itemType === 'Tool') {
+                    return (
+                        <>
+                            <div className="flex items-center space-x-4">
+                                <label>Durability:</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="5000"
+                                    value={typeFields.Durability || 250}
+                                    onChange={e => setTypeFields({ ...typeFields, Durability: e.target.value })}
+                                    className="input w-24"
+                                />
+                            </div>
+                            <div className="flex items-center space-x-4">
+                                <label>Mining Speed:</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="20"
+                                    value={typeFields['Mining Speed'] || 4}
+                                    onChange={e => setTypeFields({ ...typeFields, 'Mining Speed': e.target.value })}
+                                    className="input w-24"
+                                />
+                            </div>
+                            <div className="flex items-center space-x-4">
+                                <label>Tool Type:</label>
+                                <select
+                                    value={typeFields['Tool Type'] || 'Pickaxe'}
+                                    onChange={e => setTypeFields({ ...typeFields, 'Tool Type': e.target.value })}
+                                    className="input"
+                                >
+                                    {['Pickaxe', 'Axe', 'Shovel', 'Hoe'].map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                            </div>
+                            <div className="flex items-center space-x-4">
+                                <label>Power:</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={typeFields.Power || 10}
+                                    onChange={e => setTypeFields({ ...typeFields, Power: e.target.value })}
+                                    className="input w-24"
+                                />
+                            </div>
+                            <div className="flex items-center space-x-4">
+                                <label>Precision:</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="1"
+                                    step="0.1"
+                                    value={typeFields.Precision || 0.5}
+                                    onChange={e => setTypeFields({ ...typeFields, Precision: e.target.value })}
+                                    className="input w-24"
+                                />
+                            </div>
+                            <div className="flex flex-col space-y-2">
+                                <label>Additional Capabilities:</label>
+                                <textarea
+                                    value={typeFields['Additional Capabilities'] || ''}
+                                    onChange={e => setTypeFields({ ...typeFields, 'Additional Capabilities': e.target.value })}
+                                    placeholder='{"hydra:enchantable": true}'
+                                    className="textarea h-32"
+                                />
+                            </div>
+                        </>
+                    );
+                } else if (itemType === 'Weapon') {
+                    return (
+                        <>
+                            <div className="flex items-center space-x-4">
+                                <label>Durability:</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="5000"
+                                    value={typeFields.Durability || 500}
+                                    onChange={e => setTypeFields({ ...typeFields, Durability: e.target.value })}
+                                    className="input w-24"
+                                />
+                            </div>
+                            <div className="flex items-center space-x-4">
+                                <label>Attack Damage:</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="50"
+                                    value={typeFields['Attack Damage'] || 6}
+                                    onChange={e => setTypeFields({ ...typeFields, 'Attack Damage': e.target.value })}
+                                    className="input w-24"
+                                />
+                            </div>
+                            <div className="flex items-center space-x-4">
+                                <label>Weapon Type:</label>
+                                <select
+                                    value={typeFields['Weapon Type'] || 'Sword'}
+                                    onChange={e => setTypeFields({ ...typeFields, 'Weapon Type': e.target.value })}
+                                    className="input"
+                                >
+                                    {['Sword', 'Bow', 'Trident'].map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                            </div>
+                            <div className="flex items-center space-x-4">
+                                <label>Power:</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={typeFields.Power || 10}
+                                    onChange={e => setTypeFields({ ...typeFields, Power: e.target.value })}
+                                    className="input w-24"
+                                />
+                            </div>
+                            <div className="flex items-center space-x-4">
+                                <label>Precision:</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="1"
+                                    step="0.1"
+                                    value={typeFields.Precision || 0.5}
+                                    onChange={e => setTypeFields({ ...typeFields, Precision: e.target.value })}
+                                    className="input w-24"
+                                />
+                            </div>
+                            <div className="flex flex-col space-y-2">
+                                <label>Additional Capabilities:</label>
+                                <textarea
+                                    value={typeFields['Additional Capabilities'] || ''}
+                                    onChange={e => setTypeFields({ ...typeFields, 'Additional Capabilities': e.target.value })}
+                                    placeholder='{"hydra:critical_hit": {"chance": 0.1}}'
+                                    className="textarea h-32"
+                                />
+                            </div>
+                        </>
+                    );
+                } else {
+                    return (
+                        <div className="flex flex-col space-y-2">
+                            <label>Custom JSON Fragment:</label>
+                            <textarea
+                                value={typeFields['Custom JSON Fragment'] || ''}
+                                onChange={e => setTypeFields({ ...typeFields, 'Custom JSON Fragment': e.target.value })}
+                                placeholder='{"minecraft:display_name": {"value": "Custom"}}'
+                                className="textarea h-32"
+                            />
+                        </div>
+                    );
+                }
+            };
+
+            const renderPredefinedComponentFields = () => {
+                if (predefinedComponent === 'minecraft:use_duration') {
+                    return (
+                        <>
+                            <div className="flex items-center space-x-4">
+                                <label>Use Duration (seconds):</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="60"
+                                    step="0.1"
+                                    value={predefinedFields['Use Duration'] || 1.5}
+                                    onChange={e => setPredefinedFields({ ...predefinedFields, 'Use Duration': e.target.value })}
+                                    className="input w-24"
+                                />
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setComponents({
+                                        ...components,
+                                        'minecraft:use_duration': { value: parseFloat(predefinedFields['Use Duration'] || 1.5) }
+                                    });
+                                    setPredefinedComponent('None');
+                                    setPredefinedFields({});
+                                    log('Added predefined component: minecraft:use_duration');
+                                    generatePreview();
+                                }}
+                                className="button mt-2"
+                            >
+                                Add Use Duration
+                            </button>
+                        </>
+                    );
+                } else if (predefinedComponent === 'minecraft:cooldown') {
+                    return (
+                        <>
+                            <div className="flex items-center space-x-4">
+                                <label>Cooldown (seconds):</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="60"
+                                    step="0.1"
+                                    value={predefinedFields['Cooldown'] || 1.0}
+                                    onChange={e => setPredefinedFields({ ...predefinedFields, 'Cooldown': e.target.value })}
+                                    className="input w-24"
+                                />
+                            </div>
+                            <div className="flex items-center space-x-4">
+                                <label>Cooldown Category:</label>
+                                <input
+                                    type="text"
+                                    value={predefinedFields['Cooldown Category'] || 'custom_cooldown'}
+                                    onChange={e => setPredefinedFields({ ...predefinedFields, 'Cooldown Category': e.target.value })}
+                                    placeholder="e.g., custom_cooldown"
+                                    className="input"
+                                />
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setComponents({
+                                        ...components,
+                                        'minecraft:cooldown': {
+                                            duration: parseFloat(predefinedFields['Cooldown'] || 1.0),
+                                            category: predefinedFields['Cooldown Category'] || 'custom_cooldown'
+                                        }
+                                    });
+                                    setPredefinedComponent('None');
+                                    setPredefinedFields({});
+                                    log('Added predefined component: minecraft:cooldown');
+                                    generatePreview();
+                                }}
+                                className="button mt-2"
+                            >
+                                Add Cooldown
+                            </button>
+                        </>
+                    );
+                }
+                return null;
+            };
+
+            return (
+                <div className="container mx-auto p-4 max-w-6xl">
+                    <h1 className="text-3xl font-bold mb-4">Hydra Minecraft Add-on Studio v2.0</h1>
+                    <div className="flex space-x-4 mb-4">
+                        <button onClick={newProject} className="button">New Project</button>
+                        <button onClick={saveProject} className="button">Save Project</button>
+                        <label className="button">
+                            Open Project
+                            <input type="file" accept=".hmasproj,.json" onChange={openProject} className="hidden" />
+                        </label>
+                    </div>
+                    <div className="flex">
+                        <div className="w-2/3 pr-4">
+                            <div className="glass p-4">
+                                <div className="flex space-x-2 mb-4">
+                                    {['Metadata', 'Textures', 'Types', 'Components', 'Events', 'Behaviors', 'Export'].map(t => (
+                                        <button
+                                            key={t}
+                                            onClick={() => setTab(t)}
+                                            className={`tab ${tab === t ? 'tab-active' : ''}`}
+                                        >
+                                            {t}
+                                        </button>
+                                    ))}
+                                </div>
+                                {tab === 'Metadata' && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center space-x-4">
+                                            <label className="w-40">Identifier (namespace:name):</label>
+                                            <input
+                                                type="text"
+                                                value={identifier}
+                                                onChange={e => setIdentifier(e.target.value)}
+                                                className="input flex-1"
+                                            />
+                                        </div>
+                                        <div className="flex items-center space-x-4">
+                                            <label className="w-40">Display Name:</label>
+                                            <input
+                                                type="text"
+                                                value={displayName}
+                                                onChange={e => setDisplayName(e.target.value)}
+                                                className="input flex-1"
+                                            />
+                                        </div>
+                                        <div className="flex items-center space-x-4">
+                                            <label className="w-40">Creative Category:</label>
+                                            <input
+                                                type="text"
+                                                value={creativeCategory}
+                                                onChange={e => setCreativeCategory(e.target.value)}
+                                                className="input flex-1"
+                                            />
+                                        </div>
+                                        <div className="flex items-center space-x-4">
+                                            <label className="w-40">Max Stack:</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="64"
+                                                value={maxStack}
+                                                onChange={e => setMaxStack(e.target.value)}
+                                                className="input w-24"
+                                            />
+                                            <label className="w-40">Durability:</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="99999"
+                                                value={durability}
+                                                onChange={e => setDurability(e.target.value)}
+                                                className="input w-24"
+                                            />
+                                        </div>
+                                        <div className="flex items-center space-x-4">
+                                            <label>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={registerCreative}
+                                                    onChange={e => setRegisterCreative(e.target.checked)}
+                                                />
+                                                Register to Creative Menu
+                                            </label>
+                                        </div>
+                                        <div className="flex space-x-4">
+                                            <button onClick={generatePreview} className="button">Generate Preview</button>
+                                            <button onClick={validateAllJson} className="button">Validate All JSON</button>
+                                        </div>
+                                    </div>
+                                )}
+                                {tab === 'Textures' && (
+                                    <div className="space-y-4">
+                                        <div className="flex space-x-4">
+                                            <div
+                                                className="drop-area"
+                                                onDragOver={e => e.preventDefault()}
+                                                onDrop={e => handleDrop(e, setTextureFile)}
+                                                onClick={() => document.getElementById('textureInput').click()}
+                                            >
+                                                {textureFile ? (
+                                                    <img src={URL.createObjectURL(textureFile)} alt="Texture" className="max-h-full" />
+                                                ) : (
+                                                    <span>Drop item texture here (or click)</span>
+                                                )}
+                                            </div>
+                                            <input
+                                                id="textureInput"
+                                                type="file"
+                                                accept="image/png,image/jpeg"
+                                                onChange={e => setTextureFile(e.target.files[0])}
+                                                className="hidden"
+                                            />
+                                            <div
+                                                className="drop-area"
+                                                onDragOver={e => e.preventDefault()}
+                                                onDrop={e => handleDrop(e, setIconFile)}
+                                                onClick={() => document.getElementById('iconInput').click()}
+                                            >
+                                                {iconFile ? (
+                                                    <img src={URL.createObjectURL(iconFile)} alt="Icon" className="max-h-full" />
+                                                ) : (
+                                                    <span>Drop pack icon (128x128) here (or click)</span>
+                                                )}
+                                            </div>
+                                            <input
+                                                id="iconInput"
+                                                type="file"
+                                                accept="image/png,image/jpeg"
+                                                onChange={e => setIconFile(e.target.files[0])}
+                                                className="hidden"
+                                            />
+                                        </div>
+                                        <div className="flex items-center space-x-4">
+                                            <label>Resource texture path:</label>
+                                            <input
+                                                type="text"
+                                                value={texturePath}
+                                                onChange={e => setTexturePath(e.target.value)}
+                                                className="input flex-1"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                                {tab === 'Types' && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center space-x-4">
+                                            <label>Item Type:</label>
+                                            <select
+                                                value={itemType}
+                                                onChange={e => setTypeFields({}) || setItemType(e.target.value)}
+                                                className="input"
+                                            >
+                                                {['Custom', 'Consumable', 'Tool', 'Weapon'].map(t => (
+                                                    <option key={t} value={t}>{t}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-4">{renderTypeFields()}</div>
+                                    </div>
+                                )}
+                                {tab === 'Components' && (
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <h3>Predefined Components</h3>
+                                            <div className="flex items-center space-x-4">
+                                                <label>Select Component:</label>
+                                                <select
+                                                    value={predefinedComponent}
+                                                    onChange={e => setPredefinedFields({}) || setPredefinedComponent(e.target.value)}
+                                                    className="input"
+                                                >
+                                                    {['None', 'minecraft:use_duration', 'minecraft:cooldown'].map(c => (
+                                                        <option key={c} value={c}>{c}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            {renderPredefinedComponentFields()}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <h3>Custom Component</h3>
+                                            <div className="flex items-center space-x-4">
+                                                <label>Component Key:</label>
+                                                <input
+                                                    type="text"
+                                                    value={components.key || 'minecraft:custom_component'}
+                                                    onChange={e => setComponents({ ...components, key: e.target.value })}
+                                                    className="input flex-1"
+                                                />
+                                            </div>
+                                            <div className="flex flex-col space-y-2">
+                                                <label>Component JSON:</label>
+                                                <textarea
+                                                    value={components.value || ''}
+                                                    onChange={e => setComponents({ ...components, value: e.target.value })}
+                                                    className="textarea h-32"
+                                                />
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    if (!components.key) {
+                                                        showError('Component key is required');
+                                                        return;
+                                                    }
+                                                    if (validateJSON(components.value, 'Component')) return;
+                                                    setComponents({
+                                                        ...components,
+                                                        [components.key]: JSON.parse(components.value || '{}'),
+                                                        key: 'minecraft:custom_component',
+                                                        value: ''
+                                                    });
+                                                    log(`Added component: ${components.key}`);
+                                                    generatePreview();
+                                                }}
+                                                className="button"
+                                            >
+                                                Add / Update Component
+                                            </button>
+                                        </div>
+                                        <div>
+                                            <h3>Added Components:</h3>
+                                            <ul className="list-disc pl-5">
+                                                {Object.keys(components).filter(k => k !== 'key' && k !== 'value').map(k => (
+                                                    <li key={k}>{k}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                )}
+                                {tab === 'Events' && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center space-x-4">
+                                            <label>Event Key:</label>
+                                            <input
+                                                type="text"
+                                                value={events.key || 'on_use'}
+                                                onChange={e => setEvents({ ...events, key: e.target.value })}
+                                                className="input flex-1"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col space-y-2">
+                                            <label>Event JSON:</label>
+                                            <textarea
+                                                value={events.value || ''}
+                                                onChange={e => setEvents({ ...events, value: e.target.value })}
+                                                className="textarea h-32"
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                if (!events.key) {
+                                                    showError('Event key is required');
+                                                    return;
+                                                }
+                                                if (validateJSON(events.value, 'Event')) return;
+                                                setEvents({
+                                                    ...events,
+                                                    [events.key]: JSON.parse(events.value || '{}'),
+                                                    key: 'on_use',
+                                                    value: ''
+                                                });
+                                                log(`Added event: ${events.key}`);
+                                                generatePreview();
+                                            }}
+                                            className="button"
+                                        >
+                                            Add / Update Event
+                                        </button>
+                                        <div>
+                                            <h3>Added Events:</h3>
+                                            <ul className="list-disc pl-5">
+                                                {Object.keys(events).filter(k => k !== 'key' && k !== 'value').map(k => (
+                                                    <li key={k}>{k}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                )}
+                                {tab === 'Behaviors' && (
+                                    <div className="space-y-4">
+                                        <label>Behavior Snippets (Advanced):</label>
+                                        <textarea
+                                            value={behaviorSnippets}
+                                            onChange={e => setBehaviorSnippets(e.target.value)}
+                                            placeholder="Add behavior JSON snippets here..."
+                                            className="textarea h-48 w-full"
+                                        />
+                                    </div>
+                                )}
+                                {tab === 'Export' && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center space-x-4">
+                                            <label>Addon Base Name:</label>
+                                            <input
+                                                type="text"
+                                                value={addonName}
+                                                onChange={e => setAddonName(e.target.value)}
+                                                className="input flex-1"
+                                            />
+                                        </div>
+                                        <div className="flex items-center space-x-4">
+                                            <label>Min Engine Version:</label>
+                                            <input
+                                                type="text"
+                                                value={minEngine}
+                                                onChange={e => setMinEngine(e.target.value)}
+                                                className="input flex-1"
+                                            />
+                                        </div>
+                                        <div className="flex items-center space-x-4">
+                                            <label>Export Format:</label>
+                                            <select
+                                                value={exportFormat}
+                                                onChange={e => setExportFormat(e.target.value)}
+                                                className="input"
+                                            >
+                                                {['mcpack (recommended)', 'mcaddon', 'zip', 'json-only'].map(f => (
+                                                    <option key={f} value={f}>{f}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <button onClick={exportNow} className="button">Export Now</button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="w-1/3">
+                            <div className="glass p-4 space-y-4">
+                                <h3>Live JSON Preview</h3>
+                                <textarea
+                                    value={jsonPreview}
+                                    readOnly
+                                    className="textarea w-full h-64"
+                                />
+                                <h3>Image Preview</h3>
+                                <div className="bg-black bg-opacity-10 rounded-lg h-64 flex items-center justify-center">
+                                    {imagePreview ? (
+                                        <img src={imagePreview} alt="Preview" className="max-h-full" />
+                                    ) : (
+                                        <span>No texture or icon loaded</span>
+                                    )}
+                                </div>
+                                <h3>Debug Console / Log</h3>
+                                <div className="bg-black bg-opacity-10 rounded-lg p-2 h-48 overflow-y-auto">
+                                    {logs.map((log, i) => (
+                                        <div key={i} className="text-sm">{log}</div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<HydraStudio />, document.getElementById('root'));
+    </script>
+</body>
+</html>

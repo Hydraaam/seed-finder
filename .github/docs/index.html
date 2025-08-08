@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hydra Tools - Minecraft Add-on & Seed Finder</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for better typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1e293b, #0f172a);
+            background-attachment: fixed;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            background: rgba(255, 255, 255, 0.06);
+        }
+        .btn-primary {
+            background: linear-gradient(90deg, #10b981, #0d9488);
+            color: white;
+            transition: all 0.2s;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(90deg, #0d9488, #0f766e);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="text-gray-200">
+
+    <!-- Main Container -->
+    <div class="container mx-auto px-6 py-12 max-w-6xl">
+
+        <!-- Header -->
+        <div class="text-center mb-16">
+            <h1 class="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-green-400 via-emerald-300 to-cyan-400 text-transparent bg-clip-text">
+                Hydra Tools
+            </h1>
+            <p class="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
+                Powerful, open-source tools for Minecraft creators. Build custom add-ons or find the perfect world seed — all in your browser.
+            </p>
+        </div>
+
+        <!-- Tools Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+
+            <!-- Addon Wizard Card -->
+            <a href="addonwizard.html" class="block transform transition duration-300 hover:scale-105">
+                <div class="glass-card p-8 h-full flex flex-col">
+                    <div class="text-5xl text-green-400 mb-6 text-center">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold text-center mb-4 text-white">Add-on Wizard</h2>
+                    <p class="text-gray-300 mb-6 text-center flex-grow">
+                        Create custom items, blocks, and behaviors for Minecraft with a powerful, no-code editor. Export as .mcpack or .mcaddon.
+                    </p>
+                    <div class="text-center mt-auto">
+                        <span class="btn-primary px-8 py-3 rounded-xl font-semibold inline-block">
+                            Launch Add-on Studio
+                        </span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Seed Finder Card -->
+            <a href="seedfinder.html" class="block transform transition duration-300 hover:scale-105">
+                <div class="glass-card p-8 h-full flex flex-col">
+                    <div class="text-5xl text-blue-400 mb-6 text-center">
+                        <i class="fas fa-seedling"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold text-center mb-4 text-white">Seed Finder</h2>
+                    <p class="text-gray-300 mb-6 text-center flex-grow">
+                        Generate or search for Minecraft seeds with specific biomes and structures near spawn. Visualize your world before you play.
+                    </p>
+                    <div class="text-center mt-auto">
+                        <span class="btn-primary px-8 py-3 rounded-xl font-semibold inline-block">
+                            Find Your Perfect Seed
+                        </span>
+                    </div>
+                </div>
+            </a>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-16 text-gray-400 text-sm">
+            <p>Created with ❤️ for the Minecraft community. Open-source and free to use.</p>
+            <p class="mt-2">Made by Hydra | <a href="#" class="text-green-400 hover:underline">GitHub</a></p>
+        </div>
+
+    </div>
+
+</body>
+</html>
